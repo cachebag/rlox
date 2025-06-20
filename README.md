@@ -9,7 +9,7 @@ that tries to emphasize better error handling, clear separation of stages (scann
 # Usage
 Nothing to see here yet.
 # Resources
-- [_Crafting Interpreter's_](https://craftinginterpreters.com/)
+- [_Crafting Interpreters_](https://craftinginterpreters.com/)
 - _[The Rust Programming Language](https://doc.rust-lang.org/book/title-page.html)_ 
 - [_Rust by Example_](https://doc.rust-lang.org/rust-by-example/)
 - [_Rust Ownership, Borrowing and Lifetimes_](https://www.integralist.co.uk/posts/rust-ownership/)
