@@ -11,8 +11,6 @@
 
 
 // use std::{collections::{HashMap, HashSet}, sync::TryLockError};
-use std::{str::Chars, iter::Peekable};
-
 
 use crate::{error::ScannerError, token::{Literal, Token}};
 use crate::token_type::TokenType;
@@ -26,7 +24,6 @@ pub struct Scanner<'source> {
     start: usize,
     current: usize,
     line: usize,
-    chars_iter: Peekable<Chars<'source>>, // This is O(n) so perhaps we can optimize this later
 }
 
 impl <'source> Scanner<'source> {
@@ -38,7 +35,6 @@ impl <'source> Scanner<'source> {
             start: 0, // &str is byte indexed 
             current: 0,
             line: 1, // but lines always start at 1
-            chars_iter: source.chars().peekable(), // TODO: optimize this later
         }
     }
     // Scans the source code and returns a vector of tokens.
@@ -116,13 +112,69 @@ impl <'source> Scanner<'source> {
             Some(' ')  => {},
             Some('\r') => {},
             Some('\t') => {},
-            Some('\n') => self.line += 1, 
-            Some(c)   => return Err(ScannerError::UnexpectedChar(c, self.line)),
+            Some('\n') => self.line += 1,
+            Some('"')  => self.string()?,
+            Some(c)   =>  {
+                if self.is_digit(c) {
+                    self.number()?;
+                } else {
+                return Err(ScannerError::UnexpectedChar(c, self.line))
+                };
+            }
             None       => {},
-        }
+        };
         Ok(())
     }
 
+    fn number(&mut self) -> Result<(), ScannerError> {
+        while self.peek().map(|c| c.is_ascii_digit()).unwrap_or(false) {
+            self.advance();
+        }
+
+        if self.peek() == Some('.') &&
+            self.peek_next().map(|c| c.is_ascii_digit()).unwrap_or(false)
+        {
+            self.advance(); // consume the '.'
+            
+            while self.peek().map(|c| c.is_ascii_digit()).unwrap_or(false) {
+                self.advance();
+            }
+        }
+
+        let lexeme = &self.source[self.start..self.current];
+        let value = lexeme.parse::<f64>().expect("valid float");
+
+        self.add_token_with_literal(TokenType::Number, Some(Literal::Num(value)));
+        Ok(())
+    }
+
+    fn string(&mut self) -> Result<(), ScannerError> {
+        while let Some(ch) = self.peek() {
+            match ch {
+                '"'  => break,                  // End of string  
+                '\n' => { self.line += 1; },    // Newline, increment line count
+                '\\' => {                       // Escape sequence  
+                    self.advance();
+                    if self.is_at_end() {
+                        return Err(ScannerError::UnterminatedEscape(self.line));
+                    }
+                    self.advance(); // Again because we already peeked
+                }
+                _   => { self.advance(); } // Just consume the character
+            };
+        }
+        
+        // If we reach here, we either found a closing quote or reached the end of the source
+        if self.is_at_end() {
+            return Err(ScannerError::UnterminatedString(self.line));
+        }
+        // We found the closing quote, so we consume  it
+        self.advance();
+
+        let lexeme = &self.source[self.start + 1 .. self.current - 1];
+        self.add_token_with_literal(TokenType::String, Some(Literal::Str(lexeme.to_owned())));
+        Ok(())
+    }
     fn is_at_end(&self) -> bool {
         self.current >= self.source.len()
     }
@@ -141,12 +193,22 @@ impl <'source> Scanner<'source> {
         true
     }
 
-    fn peek(&mut self) -> Option<char> {
-        self.chars_iter.peek().copied()
+    fn peek(&self) -> Option<char> {
+        self.source[self.current..].chars().next()
+    }
+
+    fn peek_next(&self) -> Option<char> {
+        let mut it = self.source[self.current..].chars();
+        it.next()?;
+        it.next()
+    }
+
+    fn is_digit(&mut self, c: char) -> bool {
+        return c >= '0' && c <= '9'
     }
 
     fn advance(&mut self) -> Option<char> {
-        let ch = self.chars_iter.next()?;
+        let ch = self.peek()?;
         self.current += ch.len_utf8();
         Some(ch)
     }

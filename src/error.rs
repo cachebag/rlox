@@ -10,6 +10,8 @@ use std::{fmt, io};
 pub enum ScannerError {
     Io(io::Error),
     UnexpectedChar(char, usize),
+    UnterminatedString(usize),
+    UnterminatedEscape(usize),
 }
 
 // Display implementation for ScannerError
@@ -20,6 +22,12 @@ impl fmt::Display for ScannerError {
             ScannerError::UnexpectedChar(c, line) =>  {
                 write!(f, "Unexpected character '{}' on line {}", c, line)
             }
+            ScannerError::UnterminatedString(line) => {
+                write!(f, "Unterminated string on line {}", line)
+            }
+            ScannerError::UnterminatedEscape(line) => {
+                write!(f, "Untermianted escape sequence on line {}", line)
+            } 
         }
     }
 }
