@@ -11,7 +11,7 @@
 
 
 // use std::{collections::{HashMap, HashSet}, sync::TryLockError};
-use std::{str::Chars};
+use std::{str::Chars, iter::Peekable};
 
 
 use crate::{error::ScannerError, token::{Literal, Token}};
@@ -26,7 +26,7 @@ pub struct Scanner<'source> {
     start: usize,
     current: usize,
     line: usize,
-    chars_iter: Chars<'source>, // This is O(n) so perhaps we can optimize this later
+    chars_iter: Peekable<Chars<'source>>, // This is O(n) so perhaps we can optimize this later
 }
 
 impl <'source> Scanner<'source> {
@@ -38,7 +38,7 @@ impl <'source> Scanner<'source> {
             start: 0, // &str is byte indexed 
             current: 0,
             line: 1, // but lines always start at 1
-            chars_iter: source.chars(), // TODO: optimize this later
+            chars_iter: source.chars().peekable(), // TODO: optimize this later
         }
     }
     // Scans the source code and returns a vector of tokens.
@@ -53,9 +53,10 @@ impl <'source> Scanner<'source> {
         Ok(std::mem::take(&mut self.tokens))
 
     }
-
+    
     fn scan_token(&mut self) -> Result<(), ScannerError> {
         let c = self.advance();
+        // In Rust, match arms implicitly break
         match c {
             Some('(') => self.add_token(TokenType::LeftParen),
             Some(')') => self.add_token(TokenType::RightParen),
@@ -67,14 +68,81 @@ impl <'source> Scanner<'source> {
             Some('+') => self.add_token(TokenType::Plus),
             Some(';') => self.add_token(TokenType::Semicolon),
             Some('*') => self.add_token(TokenType::Star),
+            Some('!') => {
+                let kind = if self.match_char('=') {
+                    TokenType::BangEqual
+                } else {
+                    TokenType::Bang
+                };
+                self.add_token(kind);
+            }
+            Some('=') => {
+                let kind = if self.match_char('=') {
+                    TokenType::EqualEqual
+                } else {
+                    TokenType::Equal
+                };
+                self.add_token(kind);
+            }
+            Some('<') => {
+                let kind = if self.match_char('=') {
+                    TokenType::LessEqual
+                } else {
+                    TokenType::Less
+                };
+                self.add_token(kind);
+            }
+            Some('>') => {
+                let kind = if self.match_char('=') {
+                    TokenType::GreaterEqual
+                } else {
+                    TokenType::Greater
+                };
+                self.add_token(kind);
+            }
+            Some('/') => {
+                let kind: Option<TokenType> = if self.match_char('/') {
+                    while self.peek() != Some('\n') && !self.is_at_end() {
+                        self.advance();
+                    }
+                    None
+                } else {
+                    Some(TokenType::Slash)
+                };
+                if let Some(k) = kind {
+                    self.add_token(k);
+                }
+            }
+            Some(' ')  => {},
+            Some('\r') => {},
+            Some('\t') => {},
+            Some('\n') => self.line += 1, 
             Some(c)   => return Err(ScannerError::UnexpectedChar(c, self.line)),
-            None      => {},
+            None       => {},
         }
         Ok(())
     }
 
     fn is_at_end(&self) -> bool {
         self.current >= self.source.len()
+    }
+
+    fn match_char(&mut self, expected: char) -> bool {
+        if self.is_at_end() { return false; }
+
+        // SAFETY: current is always a char boundary by construction 
+        let slice = &self.source[self.current..];
+        let mut chars = slice.chars();
+        if chars.next() != Some(expected) {
+            return false;
+        }
+
+        self.current += expected.len_utf8();   // move by byte length
+        true
+    }
+
+    fn peek(&mut self) -> Option<char> {
+        self.chars_iter.peek().copied()
     }
 
     fn advance(&mut self) -> Option<char> {
