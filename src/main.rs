@@ -62,11 +62,12 @@ fn run_prompt() -> Result<()> {
 
 fn run(source: &str) -> Result<()> {
     let mut scanner = Scanner::new(source);    // Scanner<' _>
-    let tokens  = scanner.scan_tokens();
+    let tokens  = scanner.scan_tokens()?;
 
     for token in tokens {
-        println!("Token: {:#?}", token);
+        println!("Token: {:#?}", token)
     }
+    println!("{}", source);
 
     Ok(())
 }
