@@ -10,8 +10,9 @@ use std::{
     process,
     path::{Path},
 };
-use crate::error::ScannerError;
-use crate::token::Token;
+use rlox::scanner::Scanner;
+use rlox::error::ScannerError;
+// use rlox::token::Token;
 
 // result alias for failing functions
 // this is used to simplify the return type of functions
@@ -36,7 +37,7 @@ fn main() {
 }
 
 fn run_file<P: AsRef<Path>>(path: P) -> Result<()> {
-    let source = fs::read(path)?;
+    let source = fs::read_to_string(path)?;
     run(&source)?;
     Ok(())
 }
@@ -54,17 +55,17 @@ fn run_prompt() -> Result<()> {
             break;
         }
 
-        run(trimmed.as_bytes())?;     // feed the scanner
+        run(trimmed)?;     // feed the scanner
     }
     Ok(())
 }
 
 fn run(source: &str) -> Result<()> {
     let mut scanner = Scanner::new(source);    // Scanner<' _>
-    let tokens: Vec<Token> = scanner.scan_tokens();
+    let tokens  = scanner.scan_tokens();
 
     for token in tokens {
-        println!("Token: {}", token);
+        println!("Token: {:#?}", token);
     }
 
     Ok(())

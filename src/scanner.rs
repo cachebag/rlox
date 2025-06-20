@@ -10,7 +10,8 @@
 //         - A multi-byte grapheme still slices correctly because we never split a code-point inside the slice.
 
 
-// use std::{collections::{HashMap, HashSet}, sync::TryLockError};
+use std::{collections::{HashMap}, sync::RwLock};
+use once_cell::sync::Lazy;
 
 use crate::{error::ScannerError, token::{Literal, Token}};
 use crate::token_type::TokenType;
@@ -25,6 +26,29 @@ pub struct Scanner<'source> {
     current: usize,
     line: usize,
 }
+
+// This is our "static initializer" for keywords.
+// 
+static KEYWORDS: Lazy<RwLock<HashMap<&'static str, TokenType>>> = Lazy::new(|| {
+    let mut m = HashMap::new();
+    m.insert("and",      TokenType::And);
+    m.insert("class",      TokenType::Class);
+    m.insert("else",      TokenType::Else);
+    m.insert("false",      TokenType::False);
+    m.insert("for",      TokenType::For);
+    m.insert("fun",      TokenType::Fun);
+    m.insert("if",      TokenType::If);
+    m.insert("nil",      TokenType::Nil);
+    m.insert("or",      TokenType::Or);
+    m.insert("print",      TokenType::Print);
+    m.insert("return",      TokenType::Return);
+    m.insert("super",      TokenType::Super);
+    m.insert("this",      TokenType::This);
+    m.insert("true",      TokenType::True);
+    m.insert("var",      TokenType::Var);
+    m.insert("while",      TokenType::While);
+    RwLock::new(m)
+}); 
 
 impl <'source> Scanner<'source> {
     
@@ -117,6 +141,8 @@ impl <'source> Scanner<'source> {
             Some(c)   =>  {
                 if self.is_digit(c) {
                     self.number()?;
+                } else if self.is_alpha(c) {
+                    self.identifier();
                 } else {
                 return Err(ScannerError::UnexpectedChar(c, self.line))
                 };
@@ -124,6 +150,22 @@ impl <'source> Scanner<'source> {
             None       => {},
         };
         Ok(())
+    }
+
+    fn identifier(&mut self) {
+        // we don't want rusts built in is_alphabetic() because it includes non-ascii characters
+        while self.peek().map(|c| self.is_alpha_numeric(c)).unwrap_or(false) { 
+            self.advance();
+        }
+
+        let text = &self.source[self.start..self.current];
+        let token_type = KEYWORDS
+            .read()
+            .expect("Failed to read keywords")
+            .get(text)
+            .cloned()
+            .unwrap_or(TokenType::Identifier);
+        self.add_token(token_type)
     }
 
     fn number(&mut self) -> Result<(), ScannerError> {
@@ -201,6 +243,14 @@ impl <'source> Scanner<'source> {
         let mut it = self.source[self.current..].chars();
         it.next()?;
         it.next()
+    }
+
+    fn is_alpha(&mut self, c: char) -> bool {
+        c.is_ascii_alphabetic() || c == '_'
+    }
+
+    fn is_alpha_numeric(&mut self, c:char) -> bool {
+        self.is_alpha(c) || c.is_ascii_digit()
     }
 
     fn is_digit(&mut self, c: char) -> bool {

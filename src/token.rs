@@ -17,6 +17,7 @@ pub enum Literal {
 
 // This struct + impl allows us to imitate OOP's class behavior. 
 // Data and behavior is seperated here but pairing is conceptually the same
+#[derive(Debug, Clone, PartialEq)]
 pub struct Token<'source> {
     pub kind: TokenType,
     pub lexeme: &'source str, // Just want to borrow a slice, no ownership needed for now
