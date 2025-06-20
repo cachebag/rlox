@@ -1,7 +1,7 @@
-// scanner.rs 
+// main.rs 
 // author: akrm al-hakimi
-// scans lox source code and produces tokens to be fed into our parser
-
+// the main entry point for the rlox interpreter
+// handles file input and interactive REPL prompt 
 
 use std::{
     env,
