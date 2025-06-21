@@ -44,3 +44,15 @@ impl fmt::Display for Token<'_> {
         write!(f, "{} {} {:?}", self.kind, self.lexeme, self.literal)
     }
 }
+
+impl fmt::Display for Literal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Literal::Num(n) => write!(f, "{n}"),
+            Literal::Str(s) => write!(f, "\"{s}\""),
+            Literal::True   => write!(f, "True"),
+            Literal::False   => write!(f, "False"),
+            Literal::Nil       => write!(f, "nil"),
+        }
+    }
+}

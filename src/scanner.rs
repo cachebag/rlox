@@ -1,16 +1,9 @@
 // scanner.rs 
 // author: akrm al-hakimi
 // our scanner "class" to parse through and organize source code.
-//
-// Some notes: 
-//         - Rust str is UTF-8. Random indexing by code-point is O(n).
-//         - We iterate with Chars (next scalar value each time) but keep current and start as byte
-//           offsets so we can slice the original &str cheaply.
-//         - After pulling a char, we bump current by ch.len_utf8() so the byte cursor stays in sync.
-//         - A multi-byte grapheme still slices correctly because we never split a code-point inside the slice.
 
 
-use std::{collections::HashMap, iter::Scan, sync::RwLock};
+use std::{collections::HashMap, sync::RwLock};
 use once_cell::sync::Lazy;
 
 use crate::{error::ScannerError, token::{Literal, Token}};

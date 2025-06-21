@@ -10,8 +10,12 @@ use std::{
     process,
     path::{Path},
 };
-use rlox::scanner::Scanner;
+use rlox::{ast::expr, scanner::Scanner};
 use rlox::error::ScannerError;
+use rlox::ast::expr::Expr;
+use rlox::token::{Token, Literal};
+use rlox::token_type::TokenType;
+
 // use rlox::token::Token;
 
 // result alias for failing functions
@@ -35,6 +39,16 @@ fn main() {
 
     process::exit(exit_code);
 }
+
+fn dummy_token<'src>(kind: TokenType, lexeme: &'src str) -> Token<'src> {
+    Token {
+        kind,
+        lexeme,
+        literal: None,
+        line: 0,
+    }
+}
+
 
 fn run_file<P: AsRef<Path>>(path: P) -> Result<()> {
     let source = fs::read_to_string(path)?;
@@ -68,6 +82,19 @@ fn run(source: &str) -> Result<()> {
         println!("Token: {:#?}", token)
     }
     println!("{}", source);
+
+    let expression = Expr::binary(
+        Expr::unary(
+            dummy_token(TokenType::Minus, "-"),
+            Expr::Literal(Literal::Num(123.0)),
+        ),
+        dummy_token(TokenType::Star, "*"),
+        Expr::grouping(
+            Expr::literal(Literal::Num(45.67)),
+        ),
+    );
+
+    println!("AST: {}", expression);
 
     Ok(())
 }

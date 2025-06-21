@@ -1,3 +1,7 @@
+// token_type.rs 
+// author: akrm al-hakimi
+// This is our token type enum, which defines the different types of tokens
+
 use std::fmt::{self, Formatter};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
