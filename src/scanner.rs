@@ -10,7 +10,7 @@
 //         - A multi-byte grapheme still slices correctly because we never split a code-point inside the slice.
 
 
-use std::{collections::{HashMap}, sync::RwLock};
+use std::{collections::HashMap, iter::Scan, sync::RwLock};
 use once_cell::sync::Lazy;
 
 use crate::{error::ScannerError, token::{Literal, Token}};
@@ -125,6 +125,9 @@ impl <'source> Scanner<'source> {
                     while self.peek() != Some('\n') && !self.is_at_end() {
                         self.advance();
                     }
+                    None
+                } else if self.match_char('*') {
+                    self.consume_multiline_comment()?;
                     None
                 } else {
                     Some(TokenType::Slash)
@@ -261,6 +264,30 @@ impl <'source> Scanner<'source> {
         let ch = self.peek()?;
         self.current += ch.len_utf8();
         Some(ch)
+    }
+
+    
+    fn consume_multiline_comment(&mut self) -> Result<(), ScannerError> {
+        loop {
+            match self.peek() {
+                Some('*') => {
+                    if self.peek_next() == Some('/') {
+                        self.advance(); // consume '*'
+                        self.advance(); // consume '/'
+                        return Ok(());
+                    }
+                    self.advance(); // lone '*', keep scanning
+                }
+                Some('\n') => {
+                    self.line += 1; // increment line counter for newlines in comments
+                    self.advance();
+                }
+                Some(_) => {
+                    self.advance(); // any other char
+                }
+                None => return Err(ScannerError::UnterminatedComment(self.line)), // reached EOF
+            }
+        }
     }
 
     // There is no overload in Rust, so we need to use different methods for adding tokens 

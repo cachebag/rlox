@@ -12,6 +12,7 @@ pub enum ScannerError {
     UnexpectedChar(char, usize),
     UnterminatedString(usize),
     UnterminatedEscape(usize),
+    UnterminatedComment(usize),
 }
 
 // Display implementation for ScannerError
@@ -26,8 +27,11 @@ impl fmt::Display for ScannerError {
                 write!(f, "Unterminated string on line {}", line)
             }
             ScannerError::UnterminatedEscape(line) => {
-                write!(f, "Untermianted escape sequence on line {}", line)
-            } 
+                write!(f, "Unterminated escape sequence on line {}", line)
+            }
+            ScannerError::UnterminatedComment(line) => {
+                write!(f, "Unterminated comment on line {}", line)
+            }  
         }
     }
 }
