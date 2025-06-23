@@ -15,6 +15,10 @@ pub enum ScannerError {
     UnterminatedComment(usize),
 }
 
+pub enum ParserError {
+    
+}
+
 // Display implementation for ScannerError
 impl fmt::Display for ScannerError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
