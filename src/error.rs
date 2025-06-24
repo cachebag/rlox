@@ -2,7 +2,9 @@
 // author: akrm al-hakimi
 // error types for the scanner and any future components 
 
-use std::{fmt, io};
+use std::{fmt, io, process::exit};
+use crate::token_type::TokenType;
+use crate::token::Token;
 
 // In the Java implementation, error handling was more rudimentary,
 // but rust almost forces you to handle errors properly.
@@ -15,8 +17,33 @@ pub enum ScannerError {
     UnterminatedComment(usize),
 }
 
-pub enum ParserError {
-    
+pub enum ParserError<'source> {
+    Io(io::Error),
+    UnterminatedParen{ line: usize },
+    UnexpectedExpression{ found: Token<'source>, line: usize },
+    UnexpectedToken{ expected: TokenType, found: Token<'source>, line: usize },
+    UnexpectedEof{ expected: String, line: usize },
+}
+
+// Display implementation for ParserError
+impl fmt::Display for ParserError<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ParserError::Io(e) => write!(f, "io error: {}", e),
+            ParserError::UnterminatedParen { line } => {
+                write!(f, "You have an unterminated grouping on line {}", line)
+            }
+            ParserError::UnexpectedToken { expected, found, line } => {
+                write!(f, "Expected token '{}' - '{}' on line {}", expected, found, line)
+            }
+            ParserError::UnexpectedEof { expected, line } => {
+                write!(f, "Unexpected end of file: '{}' on line {}", expected, line)
+            }
+            ParserError::UnexpectedExpression { found, line } => {
+                write!(f, "Expected expression, found '{}' on line {}", found, line)
+            }
+        }
+    }
 }
 
 // Display implementation for ScannerError

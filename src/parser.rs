@@ -9,11 +9,11 @@
 //              recursively.
 
 
-use crate::{ token::Literal, token_type::TokenType };
+use crate::{ error::ParserError, token::Literal, token_type::TokenType };
 use crate::token::Token;
 use crate::ast::expr;
 
-struct Parser<'source> {
+pub struct Parser<'source> {
     tokens: Vec<Token<'source>>,
     current: usize,
 }
@@ -27,29 +27,50 @@ impl <'source> Parser<'source> {
         }
     }
 
-    fn expr(&mut self) -> expr::Expr<'source> {
-        self.equality()
+    pub fn parse(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
+        self.expr()
     }
 
-    fn equality(&mut self) -> expr::Expr<'source> {
-        let mut expr = self.comparison();
+    pub fn expr(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
+        self.comma()
+    }
+
+    fn comma(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
+        let mut expr = self.equality()?;
+        
+        while let Some(token) = self.peek() {
+            match token.kind {
+                TokenType::Comma => {
+                    self.advance();
+                    let operator = self.previous().clone();
+                    let right = self.equality()?;
+                    expr = expr::Expr::binary(expr, operator, right);
+                }
+                _ => break,
+            }
+        }
+        Ok(expr)
+    }
+
+    fn equality(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
+        let mut expr = self.comparison()?;
 
         while let Some(token) = self.peek() {
             match token.kind {
                 TokenType::BangEqual | TokenType::EqualEqual => {
                     self.advance();
                     let operator = self.previous().clone();
-                    let right = self.comparison();
+                    let right = self.comparison()?;
                     expr = expr::Expr::binary(expr, operator, right);
             }
             _ => break,
             }
         }
-        expr
+        Ok(expr)
     }
 
-    fn comparison(&mut self) -> expr::Expr<'source> {
-        let mut expr = self.term();
+    fn comparison(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
+        let mut expr = self.term()?;
 
         while let Some(token) = self.peek() {
             match token.kind {
@@ -57,57 +78,57 @@ impl <'source> Parser<'source> {
                 | TokenType::Less  | TokenType::LessEqual => {
                     self.advance();
                     let operator = self.previous().clone();
-                    let right = self.term();
+                    let right = self.term()?;
                     expr = expr::Expr::binary(expr, operator, right);
                 }
                 _ => break,
             }
         }
-        expr
+        Ok(expr)
     }
 
-    fn term(&mut self) -> expr::Expr<'source> {
-        let mut expr = self.factor();
+    fn term(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
+        let mut expr = self.factor()?;
 
         while let Some(token) = self.peek() {
             match token.kind {
                 TokenType::Minus | TokenType::Plus => {
                     self.advance();
                     let operator = self.previous().clone();
-                    let right = self.factor();
+                    let right = self.factor()?;
                     expr = expr::Expr::binary(expr, operator, right);
                 }
                 _ => break,
             }
         }
-        expr
+        Ok(expr)
     }
 
-    fn factor(&mut self) -> expr::Expr<'source> {
-        let mut expr = self.unary();
+    fn factor(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
+        let mut expr = self.unary()?;
         
         while let Some(token) = self.peek() {
             match token.kind {
                 TokenType::Slash | TokenType::Star => {
                     self.advance();
                     let operator = self.previous().clone();
-                    let right = self.unary();
+                    let right = self.unary()?;
                     expr = expr::Expr::binary(expr, operator, right);
                 }
                 _ => break,
             }
         }
-        expr
+        Ok(expr)
     }
 
-    fn unary(&mut self) -> expr::Expr<'source> {
+    fn unary(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
         if let Some(token) = self.peek() {
             match token.kind {
                 TokenType::Bang | TokenType::Minus => {
                     self.advance();
                     let operator = self.previous().clone();
-                    let right = self.unary();
-                    return expr::Expr::unary(operator, right);
+                    let right = self.unary()?;
+                    return Ok(expr::Expr::unary(operator, right));
                 }
                 _ => {}
             }
@@ -115,41 +136,71 @@ impl <'source> Parser<'source> {
         self.primary()
     }
 
-    fn primary(&mut self) -> expr::Expr<'source> {
-        let token = self.peek().expect("Unexpected end of input");
+    fn primary(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
+        let token = self.peek().ok_or_else(|| ParserError::UnexpectedEof {
+            expected: "expression".to_string(), 
+            line: self.current_line() 
+        })?.clone();
 
         match token.kind {
             TokenType::False => {
                 self.advance();
-                expr::Expr::literal(Literal::False)
+                Ok(expr::Expr::literal(Literal::False))
             }
             TokenType::True => {
                 self.advance();
-                expr::Expr::literal(Literal::True)
+                Ok(expr::Expr::literal(Literal::True))
             }
             TokenType::Nil => {
                 self.advance();
-                expr::Expr::literal(Literal::Nil)
+                Ok(expr::Expr::literal(Literal::Nil))
             }
             TokenType::Number | TokenType::String => {
                 let token = self.advance();
                 let literal = token.literal
                     .clone()
                     .expect("Literal token missing literal value");
-                expr::Expr::literal(literal)
+                Ok(expr::Expr::literal(literal))
             }
             TokenType::LeftParen => {
                 self.advance();
-                let expr = self.expr();
+                let expr = self.expr()?;
                 let next = self.peek();
                 if next.unwrap().kind == TokenType::RightParen {
                     self.advance();
-                    expr::Expr::grouping(expr)
+                    Ok(expr::Expr::grouping(expr))
                 } else {
-                    panic!("Expect ')' after expression.")
+                    Err(ParserError::UnterminatedParen { line: token.line })
                 }
             }
-            _ => panic!("Expected expression."),
+            _ => Err(ParserError::UnexpectedExpression { found: token.clone(), line: token.line }),
+        }
+    }
+
+    fn synchronize(&mut self) {
+        self.advance();
+
+        while !self.is_at_end() {
+            if self.previous().kind == TokenType::Semicolon {
+                return;
+            }
+
+            match self.peek() {
+                Some(token) => match token.kind {
+                    TokenType::Class
+                    | TokenType::Fun
+                    | TokenType::Var
+                    | TokenType::For
+                    | TokenType::If
+                    | TokenType::While
+                    | TokenType::Print
+                    | TokenType::Return => return,
+                    _ => { 
+                        self.advance();
+                    }
+                },
+                None => return,
+            }
         }
     }
 
@@ -160,15 +211,19 @@ impl <'source> Parser<'source> {
        self.previous()
     }
 
-    fn is_at_end(&mut self) -> bool {
+    fn is_at_end(&self) -> bool {
         matches!(self.peek(), Some(token) if token.kind == TokenType::Eof)
     }
 
-    fn peek(&mut self) -> Option<&Token<'source>> {
+    fn peek(&self) -> Option<&Token<'source>> {
         self.tokens.get(self.current)
     }
 
-    fn previous(&mut self) -> &Token<'source> {
+    fn previous(&self) -> &Token<'source> {
         &self.tokens[self.current - 1]
+    }
+
+    fn current_line(&self) -> usize {
+        self.peek().map(|token| token.line).unwrap_or(1)
     }
 }
