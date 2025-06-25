@@ -28,7 +28,6 @@ pub enum ParserError<'source> {
 pub enum RuntimeError {
     Io(io::Error),
     UnaryMinus{ lexeme: String, line: usize },
-    UnaryNot{ lexeme: String, line: usize },
     BinaryMinus{ lexeme: String, line: usize },
     BinaryPlus{ lexeme: String, line: usize },
     BinaryMult{ lexeme: String, line: usize },
@@ -43,9 +42,6 @@ impl fmt::Display for RuntimeError {
             RuntimeError::Io(e) => write!(f, "io error: {}", e),
             RuntimeError::UnaryMinus { lexeme, line } => {
                 write!(f, "Unary minus applied applied to non-number | violator: '{}' on line {}", lexeme, line)
-            }
-            RuntimeError::UnaryNot { lexeme, line } => {
-                write!(f, "Logical not applied applied to non-boolean | violator: '{}' on line {}", lexeme, line)
             }
             RuntimeError::BinaryPlus { lexeme, line } => {
                 write!(f, "Addition attempted on non-number/non-string values | violator: '{}' on line {}", lexeme, line)

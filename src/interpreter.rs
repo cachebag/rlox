@@ -3,6 +3,8 @@
 // our interpreter
 
 
+use core::fmt;
+
 use crate::{ast::expr::Expr, token::Literal};
 use crate::token::{Token, TokenType};
 use crate::error::RuntimeError;
@@ -23,6 +25,12 @@ impl Interpreter {
         Interpreter {}
     }
 
+    pub fn interpret(&mut self, expr: &Expr) -> Result<(), RuntimeError> {
+        let value = self.evaluate(expr)?;
+        println!("{}", value);
+        Ok(())
+    }
+
     pub fn evaluate(&mut self, expr: &Expr) -> Result<Value, RuntimeError> {
         match expr {
             Expr::Literal(lit) => self.evaluate_literal(lit),
@@ -37,7 +45,7 @@ impl Interpreter {
                 condition,
                 true_expr,
                 false_expr,
-            } => { unimplemented!() }
+            } => { self.evaluate_ternary(condition, true_expr, false_expr) }
         }
     }
 
@@ -59,11 +67,8 @@ impl Interpreter {
                 Value::Number(n) => Ok(Value::Number(-n)),
                 _ => Err(RuntimeError::UnaryMinus { lexeme: operator.lexeme.to_string(), line: operator.line }),
             },
-            TokenType::Bang => match right_val {
-                Value::Bool(b) => Ok(Value::Bool(!b)),
-                _ => Err(RuntimeError::UnaryNot { lexeme: operator.lexeme.to_string(), line: operator.line }),
-            },
-            _ => unreachable!("Uknown unary operator"),
+            TokenType::Bang => Ok(Value::Bool(!self.is_truthy(&right_val))),
+            _ => unreachable!("Unknown unary operator"),
         }
     }
 
@@ -121,6 +126,32 @@ impl Interpreter {
     }
 
     fn evaluate_ternary(&mut self, condition: &Expr, true_expr: &Expr, false_expr: &Expr) -> Result<Value, RuntimeError> {
-        todo!()
+        let condition_val = self.evaluate(condition)?;
+        
+        if self.is_truthy(&condition_val) {
+            self.evaluate(true_expr) 
+        } else {
+            self.evaluate(false_expr)
+        }
+
+    }
+
+    fn is_truthy(&self, value: &Value) -> bool {
+        match value {
+            Value::Nil => false,
+            Value::Bool(b) => *b,
+            _ => true,
+        }
+    }
+}
+
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Value::String(s) => write!(f, "{}", s),
+            Value::Number(n) => write!(f, "{}", n),
+            Value::Bool(b) => write!(f, "{}", b),
+            Value::Nil => write!(f, "nil"),
+        }
     }
 }
