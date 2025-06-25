@@ -2,8 +2,8 @@
 // author: akrm al-hakimi
 // error types for the scanner and any future components 
 
-use std::{fmt, io, process::exit};
-use crate::token_type::TokenType;
+use std::{fmt, io};
+use crate::token::TokenType;
 use crate::token::Token;
 
 // In the Java implementation, error handling was more rudimentary,

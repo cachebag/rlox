@@ -7,7 +7,7 @@ use std::{collections::HashMap, sync::RwLock};
 use once_cell::sync::Lazy;
 
 use crate::{error::ScannerError, token::{Literal, Token}};
-use crate::token_type::TokenType;
+use crate::token::TokenType;
 
 // Scanner struct to hold the state of the Scanner 
 // The impl block contains methods to scan the source code and produce tokens.

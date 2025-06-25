@@ -9,7 +9,7 @@
 //              recursively.
 
 
-use crate::{ error::ParserError, token::Literal, token_type::TokenType };
+use crate::{ error::ParserError, token::Literal, token::TokenType };
 use crate::token::Token;
 use crate::ast::expr;
 

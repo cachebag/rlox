@@ -14,7 +14,7 @@ use rlox::{ast::expr, scanner::Scanner};
 use rlox::error::{ScannerError, ParserError};
 use rlox::ast::expr::Expr;
 use rlox::token::{Token, Literal};
-use rlox::token_type::TokenType;
+use rlox::token::TokenType;
 use rlox::parser::Parser;
 
 // use rlox::token::Token;

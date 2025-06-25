@@ -1,19 +1,9 @@
 // token.rs 
 // author: akrm al-hakimi
 // our token "class" for location information and for use in later phases of our interpreter
+// this file also includes our token_type enum
 
 use std::fmt::{self, Formatter};
-use crate::token_type::TokenType;
-
-// Strongly typed vesion of Java's raw 'Object' literal 
-#[derive(Debug, Clone, PartialEq)]
-pub enum Literal {
-    Str(String),
-    Num(f64),
-    True,
-    False,
-    Nil,
-}
 
 // This struct + impl allows us to imitate OOP's class behavior. 
 // Data and behavior is seperated here but pairing is conceptually the same
@@ -37,6 +27,70 @@ impl <'source> Token<'source> {
     }
 }
 
+// Strongly typed vesion of Java's raw 'Object' literal 
+#[derive(Debug, Clone, PartialEq)]
+pub enum Literal {
+    Str(String),
+    Num(f64),
+    True,
+    False,
+    Nil,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TokenType {
+    // Single-character tokens.
+    LeftParen,
+    RightParen,
+    LeftBrace,
+    RightBrace,
+    Comma,
+    Dot,
+    Minus,
+    Plus,
+    Semicolon,
+    Slash,
+    Star,
+    Question,
+    Colon,
+
+    // One or two character tokens.
+    Bang,
+    BangEqual,
+    Equal,
+    EqualEqual,
+    Greater,
+    GreaterEqual,
+    Less,
+    LessEqual,
+
+    // Literals.
+    Identifier,
+    String,
+    Number,
+
+    // Keywords.
+    And,
+    Class,
+    Else,
+    False,
+    Fun,
+    For,
+    If,
+    Nil,
+    Or,
+    Print,
+    Return,
+    Super,
+    This,
+    True,
+    Var,
+    While,
+
+    Eof,
+}
+
+           
 
 // Imitation of Java's `toString()`
 impl fmt::Display for Token<'_> {
@@ -54,5 +108,61 @@ impl fmt::Display for Literal {
             Literal::False   => write!(f, "False"),
             Literal::Nil       => write!(f, "nil"),
         }
+    }
+}
+
+impl fmt::Display for TokenType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let token_str = match self {
+            // Single-character tokens
+            TokenType::LeftParen => "(",
+            TokenType::RightParen => ")",
+            TokenType::LeftBrace => "{",
+            TokenType::RightBrace => "}",
+            TokenType::Comma => ",",
+            TokenType::Dot => ".",
+            TokenType::Minus => "-",
+            TokenType::Plus => "+",
+            TokenType::Semicolon => ";",
+            TokenType::Slash => "/",
+            TokenType::Star => "*",
+            TokenType::Question => "?",
+            TokenType::Colon => ":",
+            
+            // One or two character tokens
+            TokenType::Bang => "!",
+            TokenType::BangEqual => "!=",
+            TokenType::Equal => "=",
+            TokenType::EqualEqual => "==",
+            TokenType::Greater => ">",
+            TokenType::GreaterEqual => ">=",
+            TokenType::Less => "<",
+            TokenType::LessEqual => "<=",
+            
+            // Literals
+            TokenType::Identifier => "IDENTIFIER",
+            TokenType::String => "STRING",
+            TokenType::Number => "NUMBER",
+            
+            // Keywords
+            TokenType::And => "and",
+            TokenType::Class => "class",
+            TokenType::Else => "else",
+            TokenType::False => "false",
+            TokenType::Fun => "fun",
+            TokenType::For => "for",
+            TokenType::If => "if",
+            TokenType::Nil => "nil",
+            TokenType::Or => "or",
+            TokenType::Print => "print",
+            TokenType::Return => "return",
+            TokenType::Super => "super",
+            TokenType::This => "this",
+            TokenType::True => "true",
+            TokenType::Var => "var",
+            TokenType::While => "while",
+            TokenType::Eof => "EOF",
+        };
+        write!(f, "{}", token_str)
     }
 }
