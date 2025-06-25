@@ -23,6 +23,11 @@ pub enum Expr<'source> {
         operator: Token<'source>,
         right: Box<Expr<'source>>,
     },
+    Ternary {
+        condition: Box<Expr<'source>>,
+        true_expr: Box<Expr<'source>>,
+        false_expr: Box<Expr<'source>>,
+    },
     Literal(Literal),
     Grouping(Box<Expr<'source>>),
 }
@@ -41,6 +46,14 @@ impl <'source> Expr<'source> {
         Self::Unary { 
             operator: op,
             right: Box::new(right),
+        }
+    }
+
+    pub fn ternary(cond: Expr<'source>, true_expr: Expr<'source>, false_expr: Expr<'source>) -> Self {
+        Self::Ternary {
+            condition: Box::new(cond),
+            true_expr: Box::new(true_expr),
+            false_expr: Box::new(false_expr),
         }
     }
 
@@ -65,6 +78,9 @@ impl fmt::Display for Expr<'_> {
             }
             Expr::Unary { operator, right } => {
             write!(f, "({} {})", operator.lexeme, right)
+            }
+            Expr::Ternary { condition, true_expr, false_expr } => {
+                write!(f, "({} ? {} : {})", condition, true_expr, false_expr)
             }
             Expr::Literal(lit) => write!(f, "{:#?}", lit),
             Expr::Grouping(expr) => write!(f, "(group {})", expr),

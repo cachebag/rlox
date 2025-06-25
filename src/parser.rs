@@ -36,17 +36,41 @@ impl <'source> Parser<'source> {
     }
 
     fn comma(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
-        let mut expr = self.equality()?;
+        let mut expr = self.ternary()?;
         
         while let Some(token) = self.peek() {
             match token.kind {
                 TokenType::Comma => {
                     self.advance();
                     let operator = self.previous().clone();
-                    let right = self.equality()?;
+                    let right = self.ternary()?;
                     expr = expr::Expr::binary(expr, operator, right);
                 }
                 _ => break,
+            }
+        }
+        Ok(expr)
+    }
+
+    fn ternary(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
+        let expr = self.equality()?;
+
+        if let Some(token) = self.peek().cloned() {
+            if token.kind == TokenType::Question {
+                self.advance();
+                let true_expr = self.expr()?;
+
+                if let Some(colon_token) = self.peek() {
+                    if colon_token.kind == TokenType::Colon {
+                        self.advance();
+                        let false_expr = self.ternary()?;
+                        return Ok(expr::Expr::ternary(expr, true_expr, false_expr))
+                    } else {
+                        return Err(ParserError::UnexpectedToken { expected: TokenType::Colon, found: colon_token.clone(), line: token.line });
+                    }
+                } else {
+                    return Err(ParserError::UnexpectedEof { expected: "':'".to_string(), line: self.current_line() });
+                }
             }
         }
         Ok(expr)
