@@ -81,6 +81,8 @@ impl <'source> Scanner<'source> {
             Some('+') => self.add_token(TokenType::Plus),
             Some(';') => self.add_token(TokenType::Semicolon),
             Some('*') => self.add_token(TokenType::Star),
+            Some('?') => self.add_token(TokenType::Question),
+            Some(':') => self.add_token(TokenType::Colon),
             Some('!') => {
                 let kind = if self.match_char('=') {
                     TokenType::BangEqual
