@@ -25,6 +25,50 @@ pub enum ParserError<'source> {
     UnexpectedEof{ expected: String, line: usize },
 }
 
+pub enum RuntimeError {
+    Io(io::Error),
+    UnaryMinus{ lexeme: String, line: usize },
+    UnaryNot{ lexeme: String, line: usize },
+    BinaryMinus{ lexeme: String, line: usize },
+    BinaryPlus{ lexeme: String, line: usize },
+    BinaryMult{ lexeme: String, line: usize },
+    BinaryDiv{ lexeme: String, line: usize },
+    BinaryComp{ lexeme: String, line: usize },
+    BinaryDBZ{ line: usize },
+}
+
+impl fmt::Display for RuntimeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RuntimeError::Io(e) => write!(f, "io error: {}", e),
+            RuntimeError::UnaryMinus { lexeme, line } => {
+                write!(f, "Unary minus applied applied to non-number | violator: '{}' on line {}", lexeme, line)
+            }
+            RuntimeError::UnaryNot { lexeme, line } => {
+                write!(f, "Logical not applied applied to non-boolean | violator: '{}' on line {}", lexeme, line)
+            }
+            RuntimeError::BinaryPlus { lexeme, line } => {
+                write!(f, "Addition attempted on non-number/non-string values | violator: '{}' on line {}", lexeme, line)
+            } 
+            RuntimeError::BinaryMinus { lexeme, line } => {
+                write!(f, "Subtraction attempted on non-number values | violator: '{}' on line {}", lexeme, line)
+            }
+            RuntimeError::BinaryMult { lexeme, line } => {
+                write!(f, "Multiplication attempted on non-number values | violator: '{}' on line {}", lexeme, line)
+            }
+            RuntimeError::BinaryDiv { lexeme, line } => {
+                write!(f, "Division attempted on non-number values | violator: '{}' on line {}", lexeme, line)
+            }
+            RuntimeError::BinaryComp { lexeme, line } => {
+                write!(f, "Comparison check attempted on non-number/non-string values | violator: '{}' on line {}", lexeme, line)
+            }
+            RuntimeError::BinaryDBZ { line } => {
+                write!(f, "Division by zero  on line {}", line)
+            }
+        }
+    }
+}
+
 // Display implementation for ParserError
 impl fmt::Display for ParserError<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
