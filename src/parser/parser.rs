@@ -9,6 +9,8 @@
 //              recursively.
 
 
+use std::process::id;
+
 use crate::{ ast::expr, 
     error::error::ParserError, 
     token::token::{Token, Literal}, 
@@ -34,7 +36,7 @@ impl <'source> Parser<'source> {
         let mut statements = Vec::new();
 
         while !self.is_at_end() {
-            statements.push(self.statement()?);
+            statements.push(self.declaration());
         }
 
         Ok(statements)
@@ -44,18 +46,49 @@ impl <'source> Parser<'source> {
         self.comma()
     }
 
+    fn declaration(&mut self) -> Option<Stmt<'source>> {
+        let result = if self.matches(&[TokenType::Var]) {
+            self.var_declaration()
+        } else {
+            self.statement()
+        };
+
+        match result {
+            Ok(stmt) => Some(stmt),
+            Err(_) => {
+                self.synchronize();
+                None
+            }
+        }
+    }
+
     fn statement(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
         if self.matches(&[TokenType::Print]) {
             self.print_statement()
-        } else {
+        } else {    
             self.expression_statement()
         }
     }
 
     fn print_statement(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
         let value = self.expr()?;
-        self.consume(TokenType::Semicolon, "Expect ';' after value.").unwrap();
+        self.consume(TokenType::Semicolon, "Expect ';' after value.")?;
         Ok(Stmt::Print(value))
+    }
+
+    fn var_declaration(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
+        let value = self.consume(TokenType::Identifier, "Expected variable name.")?;
+
+        let mut init: Option<expr::Expr<'source>> = None;
+        if self.matches(&[TokenType::Equal]) {
+            init = Some(self.expr()?);
+        }
+
+        self.consume(TokenType::Semicolon, "Expect ';' after value.").unwrap();
+        Ok(Stmt::Var { 
+            name: value, 
+            initializer: init 
+        })
     }
 
     fn expression_statement(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
@@ -195,6 +228,12 @@ impl <'source> Parser<'source> {
         })?.clone();
 
         match token.kind {
+            TokenType::Identifier => {
+                let identifier = self.advance().clone();
+                Ok(expr::Expr::Variable {
+                    name: identifier
+                })
+            }
             TokenType::False => {
                 self.advance();
                 Ok(expr::Expr::literal(Literal::False))

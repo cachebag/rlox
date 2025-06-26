@@ -23,6 +23,9 @@ pub enum Expr<'source> {
         operator: Token<'source>,
         right: Box<Expr<'source>>,
     },
+    Variable {
+        name: Token<'source>,
+    },
     Ternary {
         condition: Box<Expr<'source>>,
         true_expr: Box<Expr<'source>>,
@@ -46,6 +49,12 @@ impl <'source> Expr<'source> {
         Self::Unary { 
             operator: op,
             right: Box::new(right),
+        }
+    }
+
+    pub fn variable(var_name: Token<'source>) -> Self {
+        Self::Variable {
+            name: var_name,
         }
     }
 
@@ -77,7 +86,10 @@ impl fmt::Display for Expr<'_> {
                 write!(f, "({} {} {})", operator.lexeme, left, right)
             }
             Expr::Unary { operator, right } => {
-            write!(f, "({} {})", operator.lexeme, right)
+                write!(f, "({} {})", operator.lexeme, right)
+            }
+            Expr::Variable { name} => {
+                write!(f, "({})", name.lexeme)
             }
             Expr::Ternary { condition, true_expr, false_expr } => {
                 write!(f, "({} ? {} : {})", condition, true_expr, false_expr)

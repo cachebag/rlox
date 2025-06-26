@@ -35,6 +35,7 @@ pub enum RuntimeError {
     BinaryDiv{ lexeme: String, line: usize },
     BinaryComp{ lexeme: String, line: usize },
     BinaryDBZ{ line: usize },
+    UndefinedVariable{ found: String },
 }
 
 impl fmt::Display for RuntimeError {
@@ -61,6 +62,9 @@ impl fmt::Display for RuntimeError {
             }
             RuntimeError::BinaryDBZ { line } => {
                 write!(f, "Division by zero  on line {}", line)
+            }
+            RuntimeError::UndefinedVariable { found } => {
+                write!(f, "Undefined variable '{}'. ", found)
             }
         }
     }

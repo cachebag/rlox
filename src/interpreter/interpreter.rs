@@ -41,6 +41,7 @@ impl Interpreter {
                 operator,
                 right,
             } => { self.evaluate_binary(left, operator, right) }
+            Expr::Variable => { todo!() }
             Expr::Grouping(inner) => self.evaluate(inner),
             Expr::Ternary {
                 condition,
