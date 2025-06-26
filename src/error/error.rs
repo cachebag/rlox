@@ -3,8 +3,8 @@
 // error types for the scanner and any future components 
 
 use std::{fmt, io};
-use crate::token::TokenType;
-use crate::token::Token;
+use crate::token::token::TokenType;
+use crate::token::token::Token;
 
 // In the Java implementation, error handling was more rudimentary,
 // but rust almost forces you to handle errors properly.

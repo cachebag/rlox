@@ -9,8 +9,8 @@
 //              recursively.
 
 
-use crate::{ error::ParserError, token::Literal, token::TokenType };
-use crate::token::Token;
+use crate::{ error::error::ParserError, token::token::Literal, token::token::TokenType };
+use crate::token::token::Token;
 use crate::ast::expr;
 
 pub struct Parser<'source> {

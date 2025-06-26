@@ -5,9 +5,9 @@
 
 use core::fmt;
 
-use crate::{ast::expr::Expr, token::Literal};
-use crate::token::{Token, TokenType};
-use crate::error::RuntimeError;
+use crate::{ast::expr::Expr, token::token::Literal};
+use crate::token::token::{Token, TokenType};
+use crate::error::error::RuntimeError;
 
 pub struct Interpreter {}
 

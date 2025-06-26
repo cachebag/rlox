@@ -8,7 +8,7 @@ use std::{
     io::{self, Write},
     process,
 };
-use rlox::{interpreter::Interpreter, scanner::Scanner, parser::Parser};
+use rlox::{interpreter::interpreter::Interpreter, scanner::scanner::Scanner, parser::parser::Parser};
 
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
