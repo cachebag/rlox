@@ -9,9 +9,12 @@
 //              recursively.
 
 
-use crate::{ error::error::ParserError, token::token::Literal, token::token::TokenType };
-use crate::token::token::Token;
-use crate::ast::expr;
+use crate::{ ast::expr, 
+    error::error::ParserError, 
+    token::token::{Token, Literal}, 
+    token::token::TokenType,
+    ast::stmt::Stmt
+};
 
 pub struct Parser<'source> {
     tokens: Vec<Token<'source>>,
@@ -27,29 +30,54 @@ impl <'source> Parser<'source> {
         }
     }
 
-    pub fn parse(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
-        self.expr()
+    pub fn parse(&mut self) -> Result<Vec<Stmt<'source>>, ParserError<'source>> {
+        let mut statements = Vec::new();
+
+        while !self.is_at_end() {
+            statements.push(self.statement()?);
+        }
+
+        Ok(statements)
     }
 
     pub fn expr(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
         self.comma()
     }
 
+    fn statement(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
+        if self.matches(&[TokenType::Print]) {
+            self.print_statement()
+        } else {
+            self.expression_statement()
+        }
+    }
+
+    fn print_statement(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
+        let value = self.expr()?;
+        self.consume(TokenType::Semicolon, "Expect ';' after value.").unwrap();
+        Ok(Stmt::Print(value))
+    }
+
+    fn expression_statement(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
+        let expression = self.expr()?;
+        self.consume(TokenType::Semicolon, "Expect ';' after value.")?;
+        Ok(Stmt::Expression(expression))
+    }
     fn comma(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
         let mut expr = self.ternary()?;
         
         while let Some(token) = self.peek() {
             match token.kind {
-                TokenType::Comma => {
-                    self.advance();
-                    let operator = self.previous().clone();
-                    let right = self.ternary()?;
-                    expr = expr::Expr::binary(expr, operator, right);
+                    TokenType::Comma => {
+                        self.advance();
+                        let operator = self.previous().clone();
+                        let right = self.ternary()?;
+                        expr = expr::Expr::binary(expr, operator, right);
+                    }
+                    _ => break,
                 }
-                _ => break,
             }
-        }
-        Ok(expr)
+            Ok(expr)
     }
 
     fn ternary(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
@@ -228,11 +256,26 @@ impl <'source> Parser<'source> {
         }
     }
 
-    fn advance(&mut self) -> &Token<'source> {
+    fn consume(&mut self, expected: TokenType, message: &str) -> Result<Token<'source>, ParserError<'source>> {
+        match self.peek() {
+            Some(token) if token.kind == expected => Ok(self.advance()),
+            Some(token) => Err(ParserError::UnexpectedToken {
+                expected, 
+                found: token.clone(), 
+                line: token.line 
+            }),
+            None => Err(ParserError::UnexpectedEof {
+                expected: message.to_string(),
+                line: self.current_line(),
+            }),
+        }
+    }
+
+    fn advance(&mut self) -> Token<'source> {
         if !self.is_at_end() {
             self.current += 1;
         }
-       self.previous()
+       self.previous().clone()
     }
 
     fn is_at_end(&self) -> bool {
@@ -250,4 +293,15 @@ impl <'source> Parser<'source> {
     fn current_line(&self) -> usize {
         self.peek().map(|token| token.line).unwrap_or(1)
     }
+
+    fn matches(&mut self, types: &[TokenType]) -> bool {
+        if let Some(token) = self.peek() {
+            if types.contains(&token.kind) {
+                self.advance();
+                return true;
+            }
+        }
+        false
+    }
+
 }

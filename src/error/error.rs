@@ -17,6 +17,7 @@ pub enum ScannerError {
     UnterminatedComment(usize),
 }
 
+#[derive(Debug)]
 pub enum ParserError<'source> {
     Io(io::Error),
     UnterminatedParen{ line: usize },

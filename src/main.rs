@@ -8,7 +8,12 @@ use std::{
     io::{self, Write},
     process,
 };
-use rlox::{interpreter::interpreter::Interpreter, scanner::scanner::Scanner, parser::parser::Parser};
+use rlox::{
+    interpreter::interpreter::Interpreter, 
+    scanner::scanner::Scanner, 
+    parser::parser::Parser,
+    ast::stmt::Stmt,
+};
 
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -69,7 +74,7 @@ fn run(source: &str) {
     
     // Parser: tokens -> AST
     let mut parser = Parser::new(tokens);
-    let expr = match parser.parse() {
+    let statements: Vec<Stmt> = match parser.parse() {
         Ok(expr) => expr,
         Err(e) => {
             eprintln!("Parser error: {}", e);
@@ -79,7 +84,7 @@ fn run(source: &str) {
     
     // Interpreter: AST -> result
     let mut interpreter = Interpreter::new();
-    if let Err(e) = interpreter.interpret(&expr) {
+    if let Err(e) = interpreter.interpret(statements) {
         eprintln!("Runtime error: {}", e);
     }
 }

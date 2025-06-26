@@ -5,7 +5,7 @@
 
 use core::fmt;
 
-use crate::{ast::expr::Expr, token::token::Literal};
+use crate::{ast::{expr::Expr, stmt::Stmt}, token::token::Literal};
 use crate::token::token::{Token, TokenType};
 use crate::error::error::RuntimeError;
 
@@ -25,9 +25,10 @@ impl Interpreter {
         Interpreter {}
     }
 
-    pub fn interpret(&mut self, expr: &Expr) -> Result<(), RuntimeError> {
-        let value = self.evaluate(expr)?;
-        println!("{}", value);
+    pub fn interpret(&mut self, statements: Vec<Stmt>) -> Result<(), RuntimeError> {
+        for statement in statements {
+            self.execute(statement)?
+        }  
         Ok(())
     }
 
@@ -46,6 +47,21 @@ impl Interpreter {
                 true_expr,
                 false_expr,
             } => { self.evaluate_ternary(condition, true_expr, false_expr) }
+        }
+    }
+
+    fn execute(&mut self, stmt: Stmt) -> Result<(), RuntimeError> {
+        match stmt {
+            Stmt::Expression(expr) => {
+                self.evaluate(&expr)?;
+                Ok(())
+            },
+            Stmt::Print(expr) => {
+                let value = self.evaluate(&expr)?;
+                println!("{}", value);
+                Ok(())
+            }
+            _ => unimplemented!()
         }
     }
 
