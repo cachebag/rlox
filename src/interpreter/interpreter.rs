@@ -5,11 +5,13 @@
 
 use core::fmt;
 
-use crate::{ast::{expr::Expr, stmt::Stmt}, token::token::Literal};
+use crate::{ast::{expr::Expr, stmt::Stmt}, environment::environment::Environment, token::token::Literal};
 use crate::token::token::{Token, TokenType};
 use crate::error::error::RuntimeError;
 
-pub struct Interpreter {}
+pub struct Interpreter {
+    environment: Environment,
+}
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum Value {
@@ -22,7 +24,9 @@ pub enum Value {
 impl Interpreter {
 
     pub fn new() -> Self {
-        Interpreter {}
+        Interpreter {
+            environment: Environment::new(),
+        }
     }
 
     pub fn interpret(&mut self, statements: Vec<Stmt>) -> Result<(), RuntimeError> {
@@ -32,16 +36,20 @@ impl Interpreter {
         Ok(())
     }
 
-    pub fn evaluate(&mut self, expr: &Expr) -> Result<Value, RuntimeError> {
+    pub fn evaluate<'source>(&mut self, expr: &Expr<'source>) -> Result<Value, RuntimeError> {
         match expr {
             Expr::Literal(lit) => self.evaluate_literal(lit),
             Expr::Unary { operator, right } => { self.evaluate_unary(operator, right) }
+            Expr::Assign { name, value } => { self.evaluate_assignment(name.clone(), (**value).clone()) }
+
             Expr::Binary {
                 left,
                 operator,
                 right,
             } => { self.evaluate_binary(left, operator, right) }
-            Expr::Variable => { todo!() }
+            Expr::Variable { 
+                name,
+            } => { self.environment.get(name )}
             Expr::Grouping(inner) => self.evaluate(inner),
             Expr::Ternary {
                 condition,
@@ -61,10 +69,37 @@ impl Interpreter {
                 let value = self.evaluate(&expr)?;
                 println!("{}", value);
                 Ok(())
+            },
+            // In jlox, you can define unitialized variables but if you use them they'll just be nil
+            Stmt::Var { name, initializer } => {
+                let value = match initializer {
+                    Some(expr) => self.evaluate(&expr)?,
+                    None => Value::Nil,
+                };
+                self.environment.define(name.lexeme.to_string(), value)?;
+                Ok(())
             }
             _ => unimplemented!()
         }
     }
+
+    fn evaluate_var_decl<'source>(&mut self, name: Token<'source>, initializer: Option<Expr<'source>>) -> Result<Value, RuntimeError> {
+        let value = match initializer {
+            Some(expr) => self.evaluate(&expr)?,
+            None => Value::Nil,
+        };
+
+        self.environment.define(name.to_string(), value)?;
+        Ok(Value::Nil)
+    } 
+
+    fn evaluate_assignment<'source>(&mut self, name: Token<'source>, value: Expr<'source>) -> Result<Value, RuntimeError> {
+
+        let value = self.evaluate(&value)?;
+
+        self.environment.assign(name, &value);
+        Ok(value)
+    } 
 
     fn evaluate_literal(&self, lit: &Literal) -> Result<Value, RuntimeError> {
         match lit {

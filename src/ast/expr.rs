@@ -14,6 +14,10 @@ use std::fmt;
 
 #[derive(Debug, Clone)]
 pub enum Expr<'source> {
+    Assign {
+        name: Token<'source>,
+        value: Box<Expr<'source>>,
+    },
     Binary {
         left: Box<Expr<'source>>,
         operator: Token<'source>,
@@ -36,6 +40,13 @@ pub enum Expr<'source> {
 }
 
 impl <'source> Expr<'source> {
+
+    pub fn assignment(val_name: Token<'source>, value: Expr<'source>) -> Self {
+        Self::Assign {
+            name: val_name,
+            value: Box::new(value),
+        }
+    }
     
     pub fn binary(left: Expr<'source>, op: Token<'source>, right: Expr<'source>) -> Self {
         Self::Binary { 
@@ -82,6 +93,9 @@ impl <'source> Expr<'source> {
 impl fmt::Display for Expr<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Expr::Assign { name, value } => {
+                write!(f, "({} {})", name, value)
+            }
             Expr::Binary { left, operator, right } => {
                 write!(f, "({} {} {})", operator.lexeme, left, right)
             }

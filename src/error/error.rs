@@ -24,6 +24,7 @@ pub enum ParserError<'source> {
     UnexpectedExpression{ found: Token<'source>, line: usize },
     UnexpectedToken{ expected: TokenType, found: Token<'source>, line: usize },
     UnexpectedEof{ expected: String, line: usize },
+    InvalidAssignmentTarget{ found: Token<'source>, line: usize },
 }
 
 pub enum RuntimeError {
@@ -86,6 +87,9 @@ impl fmt::Display for ParserError<'_> {
             }
             ParserError::UnexpectedExpression { found, line } => {
                 write!(f, "Expected expression, found '{}' on line {}", found, line)
+            }
+            ParserError::InvalidAssignmentTarget { found, line } => {
+                write!(f, "Invalid assignment target '{}' on line {}", found, line)
             }
         }
     }

@@ -9,8 +9,6 @@
 //              recursively.
 
 
-use std::process::id;
-
 use crate::{ ast::expr, 
     error::error::ParserError, 
     token::token::{Token, Literal}, 
@@ -36,7 +34,9 @@ impl <'source> Parser<'source> {
         let mut statements = Vec::new();
 
         while !self.is_at_end() {
-            statements.push(self.declaration());
+            if let Some(stmt) = self.declaration() {
+                statements.push(stmt);
+            }
         }
 
         Ok(statements)
@@ -96,8 +96,9 @@ impl <'source> Parser<'source> {
         self.consume(TokenType::Semicolon, "Expect ';' after value.")?;
         Ok(Stmt::Expression(expression))
     }
+
     fn comma(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
-        let mut expr = self.ternary()?;
+        let mut expr = self.assignment()?;
         
         while let Some(token) = self.peek() {
             match token.kind {
@@ -112,6 +113,31 @@ impl <'source> Parser<'source> {
             }
             Ok(expr)
     }
+
+    fn assignment(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
+        let expr = self.ternary()?;
+        
+        // Is the next token '='?
+        if let Some(token) = self.peek() {
+            if token.kind == TokenType::Equal {
+                self.advance(); // consume it 
+                // Recursively call assignment to get the value - We are now on the right-hand side
+                // of the assignment 
+                let value = self.assignment()?;
+
+                // Check if the left-hand side is a variable
+                if let expr::Expr::Variable { name } = expr {
+                    return Ok(expr::Expr::Assign { name, value: Box::new(value) });
+                } else { 
+                    // If not, we have an invalid assignment target
+                    let token = self.previous();
+                    return Err(ParserError::InvalidAssignmentTarget { found: token.clone(), line: token.line });
+                }
+            }
+        }
+        Ok(expr)
+    }
+
 
     fn ternary(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
         let expr = self.equality()?;
