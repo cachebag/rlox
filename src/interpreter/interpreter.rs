@@ -5,12 +5,12 @@
 
 use core::fmt;
 
-use crate::{ast::{expr::Expr, stmt::Stmt}, environment::environment::Environment, token::token::Literal};
+use crate::{ast::{expr::Expr, stmt::Stmt}, environment::{env::SharedEnv, env::Environment}, token::token::Literal};
 use crate::token::token::{Token, TokenType};
 use crate::error::error::RuntimeError;
 
-pub struct Interpreter {
-    environment: Environment,
+pub struct Interpreter<'source> {
+    environment: SharedEnv<'source>,
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
@@ -21,7 +21,14 @@ pub enum Value {
     Nil,
 }
 
-impl Interpreter {
+#[allow(clippy::needless_lifetimes)]
+impl<'source> Default for Interpreter<'source> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl <'source>Interpreter <'source> {
 
     pub fn new() -> Self {
         Interpreter {
@@ -29,14 +36,14 @@ impl Interpreter {
         }
     }
 
-    pub fn interpret(&mut self, statements: Vec<Stmt>) -> Result<(), RuntimeError> {
+    pub fn interpret(&mut self, statements: Vec<Stmt<'source>>) -> Result<(), RuntimeError> {
         for statement in statements {
             self.execute(statement)?
         }  
         Ok(())
     }
 
-    pub fn evaluate<'source>(&mut self, expr: &Expr<'source>) -> Result<Value, RuntimeError> {
+    pub fn evaluate(&mut self, expr: &Expr<'source>) -> Result<Value, RuntimeError> {
         match expr {
             Expr::Literal(lit) => self.evaluate_literal(lit),
             Expr::Unary { operator, right } => { self.evaluate_unary(operator, right) }
@@ -49,7 +56,7 @@ impl Interpreter {
             } => { self.evaluate_binary(left, operator, right) }
             Expr::Variable { 
                 name,
-            } => { self.environment.get(name )}
+            } => { self.environment.borrow().get(name )}
             Expr::Grouping(inner) => self.evaluate(inner),
             Expr::Ternary {
                 condition,
@@ -59,8 +66,12 @@ impl Interpreter {
         }
     }
 
-    fn execute(&mut self, stmt: Stmt) -> Result<(), RuntimeError> {
+    fn execute(&mut self, stmt: Stmt<'source>) -> Result<(), RuntimeError> {
         match stmt {
+            Stmt::Block(statements) => {
+                let new_env = Environment::from_enclosing(self.environment.clone());
+                self.execute_block(&statements, new_env)
+            }
             Stmt::Expression(expr) => {
                 self.evaluate(&expr)?;
                 Ok(())
@@ -76,28 +87,43 @@ impl Interpreter {
                     Some(expr) => self.evaluate(&expr)?,
                     None => Value::Nil,
                 };
-                self.environment.define(name.lexeme.to_string(), value)?;
+                self.environment.borrow_mut().define(name.lexeme.to_string(), value);
                 Ok(())
             }
             _ => unimplemented!()
         }
     }
 
-    fn evaluate_var_decl<'source>(&mut self, name: Token<'source>, initializer: Option<Expr<'source>>) -> Result<Value, RuntimeError> {
+    fn execute_block(&mut self, statements: &[Stmt<'source>], new_env: SharedEnv<'source>) -> Result<(), RuntimeError> {
+        let previous = self.environment.clone();
+        self.environment = new_env;
+
+        let result = statements.iter().try_for_each(|stmt| self.execute(stmt.clone()));
+
+        self.environment = previous;
+        result
+    } 
+
+    fn evaluate_block_statement(&mut self, stmt: &[Stmt<'source>], new_env: SharedEnv<'source>) -> Result<Value, RuntimeError> {
+        self.execute_block(stmt, new_env)?;
+        Ok(Value::Nil)
+    }
+
+    fn evaluate_var_decl(&mut self, name: Token<'source>, initializer: Option<Expr<'source>>) -> Result<Value, RuntimeError> {
         let value = match initializer {
             Some(expr) => self.evaluate(&expr)?,
             None => Value::Nil,
         };
 
-        self.environment.define(name.to_string(), value)?;
+        self.environment.borrow_mut().define(name.to_string(), value);
         Ok(Value::Nil)
     } 
 
-    fn evaluate_assignment<'source>(&mut self, name: Token<'source>, value: Expr<'source>) -> Result<Value, RuntimeError> {
+    fn evaluate_assignment(&mut self, name: Token<'source>, value: Expr<'source>) -> Result<Value, RuntimeError> {
 
         let value = self.evaluate(&value)?;
 
-        self.environment.assign(name, &value);
+        self.environment.borrow_mut().assign(name, &value)?;
         Ok(value)
     } 
 
@@ -111,7 +137,7 @@ impl Interpreter {
         }
     }
 
-    fn evaluate_unary(&mut self, operator: &Token, right: &Expr) -> Result<Value, RuntimeError> {
+    fn evaluate_unary(&mut self, operator: &Token, right: &Expr<'source>) -> Result<Value, RuntimeError> {
         let right_val = self.evaluate(right)?;
 
         match operator.kind {
@@ -124,7 +150,7 @@ impl Interpreter {
         }
     }
 
-    fn evaluate_binary (&mut self, left: &Expr, operator: &Token, right: &Expr) -> Result<Value, RuntimeError> {
+    fn evaluate_binary (&mut self, left: &Expr<'source>, operator: &Token, right: &Expr<'source>) -> Result<Value, RuntimeError> {
         let left_val = self.evaluate(left)?;
         let right_val = self.evaluate(right)?;
 
@@ -177,7 +203,7 @@ impl Interpreter {
         }
     }
 
-    fn evaluate_ternary(&mut self, condition: &Expr, true_expr: &Expr, false_expr: &Expr) -> Result<Value, RuntimeError> {
+    fn evaluate_ternary(&mut self, condition: &Expr<'source>, true_expr: &Expr<'source>, false_expr: &Expr<'source>) -> Result<Value, RuntimeError> {
         let condition_val = self.evaluate(condition)?;
         
         if self.is_truthy(&condition_val) {

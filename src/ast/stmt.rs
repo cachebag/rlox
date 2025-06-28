@@ -10,12 +10,12 @@ pub struct FunctionDecl<'source> {
 
 #[derive(Debug, Clone)]
 pub enum Stmt<'source> {
-    Block(Vec<Stmt<'source>>),
     Class {
         name: Token<'source>,
         superclass: Option<Expr<'source>>,
         methods: Vec<FunctionDecl<'source>>,
     },
+    Block(Vec<Stmt<'source>>),
     Expression(Expr<'source>),
     Function(FunctionDecl<'source>),
     If {

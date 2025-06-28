@@ -9,50 +9,46 @@
 //                      - We use `Option<Box<Environment>>` to support nesting while maintaining known size at compile time
 // This forms the backbone of scope management for block scopes, functions, and closures in the interpreter.
 
-use std::{collections::HashMap};
+use std::{
+    collections::HashMap,
+    rc::Rc,
+    cell::RefCell,
+};
 use crate::{error::error::{RuntimeError}, interpreter::Value};
 use crate::token::token::Token;
 
+pub type SharedEnv<'source> = Rc<RefCell<Environment<'source>>>;
 
-pub struct Environment {
-    enclosing: Option<Box<Environment>>,
+pub struct Environment<'source> {
+    enclosing: Option<SharedEnv<'source>>,
     values: HashMap<String, Value>,
 }
 
-
-impl Default for Environment {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Environment {
+impl<'source> Environment<'source> {
     
-    pub fn new() -> Self {
-        Self {
+    pub fn new() -> SharedEnv<'source> {
+        Rc::new(RefCell::new(Self {
             values: HashMap::new(),
             enclosing: None,
-        }
+        }))
     }
 
-    pub fn from_enclosing(enclosing: Environment) -> Self {
-        Self {
+    pub fn from_enclosing(enclosing: SharedEnv<'source>) -> SharedEnv<'source> {
+        Rc::new(RefCell::new(Self {
             values: HashMap::new(),
-            enclosing: Some(Box::new(enclosing)),
-        }
+            enclosing: Some(enclosing),
+        }))
     }
 
-
-    pub fn define(&mut self, name: String, val: Value) -> Result<(), RuntimeError> {
+    pub fn define(&mut self, name: String, val: Value) {
         self.values.insert(name, val);
-        Ok(())
     }
 
-    pub fn get(&self, name: &Token) -> Result<Value, RuntimeError> {
+    pub fn get(&self, name: &Token<'source>) -> Result<Value, RuntimeError> {
         if let Some(val) = self.values.get(name.lexeme) {
             Ok(val.clone())
         } else if let Some(enclosing) = &self.enclosing {
-            enclosing.get(name)
+            enclosing.borrow().get(name)
         } else {
             Err(RuntimeError::UndefinedVariable {
                 found: name.lexeme.to_string(),
@@ -60,11 +56,12 @@ impl Environment {
         }  
     } 
 
-    pub fn assign(&mut self, name: Token, val: &Value) -> Result<Value, RuntimeError> {
+    pub fn assign(&mut self, name: Token<'source>, val: &Value) -> Result<Value, RuntimeError> {
         if self.values.contains_key(name.lexeme) {
-            Ok(self.values.insert(name.lexeme.to_string(), val.clone()).unwrap_or(Value::Nil))
-        } else if let Some(enclosing) = self.enclosing.as_mut() {
-            enclosing.assign(name, val)
+            self.values.insert(name.lexeme.to_string(), val.clone());
+            Ok(val.clone())
+        } else if let Some(enclosing) = &self.enclosing {
+            enclosing.borrow_mut().assign(name, val)
         } else { 
             Err(RuntimeError::UndefinedVariable {
                 found: name.lexeme.to_string() 

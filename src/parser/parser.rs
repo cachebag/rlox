@@ -65,7 +65,9 @@ impl <'source> Parser<'source> {
     fn statement(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
         if self.matches(&[TokenType::Print]) {
             self.print_statement()
-        } else {    
+        } else if self.matches(&[TokenType::LeftBrace]) {
+            self.block()
+        } else {
             self.expression_statement()
         }
     }
@@ -95,6 +97,16 @@ impl <'source> Parser<'source> {
         let expression = self.expr()?;
         self.consume(TokenType::Semicolon, "Expect ';' after value.")?;
         Ok(Stmt::Expression(expression))
+    }
+
+    fn block(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
+        let mut statements: Vec<Stmt<'source>> = Vec::new();
+        while !self.check(&[TokenType::RightBrace]) && !self.is_at_end() {
+            statements.push(self.declaration().unwrap());
+        }
+
+        self.consume(TokenType::RightBrace, "Expect '}' after block.")?;
+        Ok(Stmt::Block(statements))
     }
 
     fn comma(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
@@ -350,6 +362,15 @@ impl <'source> Parser<'source> {
     fn peek(&self) -> Option<&Token<'source>> {
         self.tokens.get(self.current)
     }
+
+    fn check(&self, matches: &[TokenType]) -> bool {
+       if let Some(token) = self.peek() {
+            if matches.contains(&token.kind) {
+                return true;
+            }
+        } 
+        false 
+    } 
 
     fn previous(&self) -> &Token<'source> {
         &self.tokens[self.current - 1]

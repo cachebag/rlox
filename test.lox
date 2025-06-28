@@ -1,9 +1,21 @@
-print "one";
-print true;
-print 2 + 1;
-print 5 != 6 ? "true": "false";
-print "hello, world!";
+var a = "global a";
+var b = "global b";
+var c = "global c";
+{
+  var a = "outer a";
+  var b = "outer b";
+  {
+    var a = "inner a";
+    print a;
+    print b;
+    print c;
+  }
+  print a;
+  print b;
+  print c;
+}
+print a;
+print b;
+print c;
 
-a = 6;
-
-a != 3 ? true : false;
+5 != 6 ? true : false;
