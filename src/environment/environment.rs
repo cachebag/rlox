@@ -1,10 +1,11 @@
 use std::{collections::HashMap};
-use crate::{error::error::{ParserError, RuntimeError}, interpreter::Value};
+use crate::{error::error::{RuntimeError}, interpreter::Value};
 use crate::token::token::Token;
 
 
 pub struct Environment {
-    values: HashMap<String, Value>, 
+    enclosing: Option<Box<Environment>>,
+    values: HashMap<String, Value>,
 }
 
 impl Environment {
