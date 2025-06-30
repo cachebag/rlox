@@ -9,10 +9,9 @@ use std::{
     process,
 };
 use rlox::{
-    interpreter::interpreter::Interpreter, 
-    scanner::scanner::Scanner, 
-    parser::parser::Parser,
-    ast::stmt::Stmt,
+        interpreter::Interpreter, 
+        parser::parser::Parser, 
+        scanner::scanner::Scanner,
 };
 
 fn main() {
@@ -26,6 +25,7 @@ fn main() {
             process::exit(64);
         }
     }
+
 }
 
 fn run_file(path: &str) {
@@ -61,6 +61,7 @@ fn run_prompt() {
     }
 }
 
+
 fn run(source: &str) {
     // Scanner: source -> tokens
     let mut scanner = Scanner::new(source);
@@ -71,20 +72,30 @@ fn run(source: &str) {
             return;
         }
     };
-    
-    // Parser: tokens -> AST
-    let mut parser = Parser::new(tokens);
-    let statements: Vec<Stmt> = match parser.parse() {
-        Ok(expr) => expr,
-        Err(e) => {
-            eprintln!("Parser error: {}", e);
-            return;
+
+    // First attempt: Parse as statements
+    let mut parser = Parser::new(tokens.clone());
+    match parser.parse() {
+        Ok(statements) if !statements.is_empty() => {
+            let mut interpreter = Interpreter::new();
+            if let Err(e) = interpreter.interpret(statements) {
+                eprintln!("Runtime error: {}", e);
+            }
         }
-    };
-    
-    // Interpreter: AST -> result
-    let mut interpreter = Interpreter::new();
-    if let Err(e) = interpreter.interpret(statements) {
-        eprintln!("Runtime error: {}", e);
+        _ => {
+            // Fallback: Parse as single expression
+            let mut expr_parser = Parser::new(tokens);
+            match expr_parser.expr() {
+                Ok(expr) => {
+                    let mut interpreter = Interpreter::new();
+                    match interpreter.evaluate(&expr) {
+                        Ok(value) => println!("{}", value),
+                        Err(e) => eprintln!("Runtime error: {}", e),
+                    }
+                }
+                Err(e) => eprintln!("Parser error: {}", e),
+            }
+        }
     }
 }
+
