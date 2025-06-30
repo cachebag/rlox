@@ -133,12 +133,20 @@ impl Interpreter {
         Ok(Value::Nil)
     } 
 
+    fn evaluate_while(&mut self, cond: Expr, body: Stmt) -> Result<Value, RuntimeError> {
+        let cond = self.evaluate(&cond)?;
+        if self.is_truthy(&cond) {
+            self.execute(body)?
+        }
+        Ok(Value::Nil)
+    }
+
     fn evaluate_if_statement(&mut self, cond: Expr, then_b: Stmt, else_b: Option<Stmt>) -> Result<Value, RuntimeError> {
         let condition_val = self.evaluate(&cond)?;
 
         if self.is_truthy(&condition_val) {
            self.evaluate_block_statement(&[then_b], Environment::from_enclosing(self.environment.clone()))?; 
-        } else if  let Some(else_stmt) = else_b {
+        } else if let Some(else_stmt) = else_b {
             self.execute(else_stmt)?;
         }
 

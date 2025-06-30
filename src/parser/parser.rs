@@ -65,8 +65,10 @@ impl <'source> Parser<'source> {
     fn statement(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
         if self.matches(&[TokenType::If]) {
             self.if_statement()
-        } else if  self.matches(&[TokenType::Print]) {
+        } else if self.matches(&[TokenType::Print]) {
             self.print_statement()
+        } else if self.matches(&[TokenType::While]) {
+            self.while_statement()
         } else if self.matches(&[TokenType::LeftBrace]) {
             self.block()
         } else {
@@ -111,6 +113,18 @@ impl <'source> Parser<'source> {
             name: value, 
             initializer: init 
         })
+    }
+
+    fn while_statement(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
+        self.consume(TokenType::LeftParen, "Expected '(' after 'while'.")?;
+        let cond = self.expr()?;
+        self.consume(TokenType::RightParen, "Expected ')' after condition.")?;
+        let cond_body = self.statement()?;
+        Ok(Stmt::While { 
+            condition: cond, 
+            body: Box::new(cond_body),
+        })
+
     }
 
     fn expression_statement(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
