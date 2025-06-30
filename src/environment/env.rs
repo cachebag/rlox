@@ -17,23 +17,23 @@ use std::{
 use crate::{error::error::{RuntimeError}, interpreter::Value};
 use crate::token::token::Token;
 
-pub type SharedEnv<'source> = Rc<RefCell<Environment<'source>>>;
+pub type SharedEnv = Rc<RefCell<Environment>>;
 
-pub struct Environment<'source> {
-    enclosing: Option<SharedEnv<'source>>,
+pub struct Environment {
+    enclosing: Option<SharedEnv>,
     values: HashMap<String, Value>,
 }
 
-impl<'source> Environment<'source> {
+impl Environment {
     
-    pub fn new() -> SharedEnv<'source> {
+    pub fn new() -> SharedEnv {
         Rc::new(RefCell::new(Self {
             values: HashMap::new(),
             enclosing: None,
         }))
     }
 
-    pub fn from_enclosing(enclosing: SharedEnv<'source>) -> SharedEnv<'source> {
+    pub fn from_enclosing(enclosing: SharedEnv) -> SharedEnv {
         Rc::new(RefCell::new(Self {
             values: HashMap::new(),
             enclosing: Some(enclosing),
@@ -44,7 +44,7 @@ impl<'source> Environment<'source> {
         self.values.insert(name, val);
     }
 
-    pub fn get(&self, name: &Token<'source>) -> Result<Value, RuntimeError> {
+    pub fn get(&self, name: &Token) -> Result<Value, RuntimeError> {
         if let Some(val) = self.values.get(name.lexeme) {
             Ok(val.clone())
         } else if let Some(enclosing) = &self.enclosing {
@@ -54,17 +54,19 @@ impl<'source> Environment<'source> {
                 found: name.lexeme.to_string(),
             })
         }  
-    } 
+    }
+ 
 
-    pub fn assign(&mut self, name: Token<'source>, val: &Value) -> Result<Value, RuntimeError> {
+
+    pub fn assign(&mut self, name: Token, val: &Value) -> Result<Value, RuntimeError> {
         if self.values.contains_key(name.lexeme) {
             self.values.insert(name.lexeme.to_string(), val.clone());
             Ok(val.clone())
         } else if let Some(enclosing) = &self.enclosing {
             enclosing.borrow_mut().assign(name, val)
-        } else { 
+        } else {
             Err(RuntimeError::UndefinedVariable {
-                found: name.lexeme.to_string() 
+                found: name.lexeme.to_string(),
             })
         }
     }

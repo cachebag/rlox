@@ -5,12 +5,22 @@
 
 use core::fmt;
 
-use crate::{ast::{expr::Expr, stmt::Stmt}, environment::{env::SharedEnv, env::Environment}, token::token::Literal};
-use crate::token::token::{Token, TokenType};
+use crate::{
+    ast::{
+        expr::Expr, 
+        stmt::Stmt
+    }, 
+    environment::{
+        env::SharedEnv, 
+        env::Environment
+    }, 
+    token::token::Literal
+};
+use crate::token::token::{ Token, TokenType };
 use crate::error::error::RuntimeError;
 
-pub struct Interpreter<'source> {
-    environment: SharedEnv<'source>,
+pub struct Interpreter {
+    environment: SharedEnv,
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
@@ -22,13 +32,13 @@ pub enum Value {
 }
 
 #[allow(clippy::needless_lifetimes)]
-impl<'source> Default for Interpreter<'source> {
+impl Default for Interpreter {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl <'source>Interpreter <'source> {
+impl Interpreter {
 
     pub fn new() -> Self {
         Interpreter {
@@ -36,19 +46,18 @@ impl <'source>Interpreter <'source> {
         }
     }
 
-    pub fn interpret(&mut self, statements: Vec<Stmt<'source>>) -> Result<(), RuntimeError> {
+    pub fn interpret(&mut self, statements: Vec<Stmt>) -> Result<(), RuntimeError> {
         for statement in statements {
             self.execute(statement)?
         }  
         Ok(())
     }
 
-    pub fn evaluate(&mut self, expr: &Expr<'source>) -> Result<Value, RuntimeError> {
+    pub fn evaluate(&mut self, expr: &Expr) -> Result<Value, RuntimeError> {
         match expr {
             Expr::Literal(lit) => self.evaluate_literal(lit),
             Expr::Unary { operator, right } => { self.evaluate_unary(operator, right) }
             Expr::Assign { name, value } => { self.evaluate_assignment(name.clone(), (**value).clone()) }
-
             Expr::Binary {
                 left,
                 operator,
@@ -63,10 +72,11 @@ impl <'source>Interpreter <'source> {
                 true_expr,
                 false_expr,
             } => { self.evaluate_ternary(condition, true_expr, false_expr) }
+            Expr::Logical { left, operator, right } => self.evaluate_logical(left, operator, right)
         }
     }
 
-    fn execute(&mut self, stmt: Stmt<'source>) -> Result<(), RuntimeError> {
+    fn execute(&mut self, stmt: Stmt) -> Result<(), RuntimeError> {
         match stmt {
             Stmt::Block(statements) => {
                 let new_env = Environment::from_enclosing(self.environment.clone());
@@ -76,6 +86,14 @@ impl <'source>Interpreter <'source> {
                 self.evaluate(&expr)?;
                 Ok(())
             },
+            Stmt::If {
+                condition, 
+                then_branch, 
+                else_branch 
+            } => {
+                self.evaluate_if_statement(condition, *then_branch, else_branch.map(|b| *b))?;
+                Ok(())
+            },
             Stmt::Print(expr) => {
                 let value = self.evaluate(&expr)?;
                 println!("{}", value);
@@ -83,18 +101,14 @@ impl <'source>Interpreter <'source> {
             },
             // In jlox, you can define unitialized variables but if you use them they'll just be nil
             Stmt::Var { name, initializer } => {
-                let value = match initializer {
-                    Some(expr) => self.evaluate(&expr)?,
-                    None => Value::Nil,
-                };
-                self.environment.borrow_mut().define(name.lexeme.to_string(), value);
+                self.evaluate_var_decl(name, initializer)?;
                 Ok(())
             }
             _ => unimplemented!()
         }
     }
 
-    fn execute_block(&mut self, statements: &[Stmt<'source>], new_env: SharedEnv<'source>) -> Result<(), RuntimeError> {
+    fn execute_block(&mut self, statements: &[Stmt], new_env: SharedEnv) -> Result<(), RuntimeError> {
         let previous = self.environment.clone();
         self.environment = new_env;
 
@@ -104,12 +118,12 @@ impl <'source>Interpreter <'source> {
         result
     } 
 
-    fn evaluate_block_statement(&mut self, stmt: &[Stmt<'source>], new_env: SharedEnv<'source>) -> Result<Value, RuntimeError> {
+    fn evaluate_block_statement(&mut self, stmt: &[Stmt], new_env: SharedEnv) -> Result<Value, RuntimeError> {
         self.execute_block(stmt, new_env)?;
         Ok(Value::Nil)
     }
 
-    fn evaluate_var_decl(&mut self, name: Token<'source>, initializer: Option<Expr<'source>>) -> Result<Value, RuntimeError> {
+    fn evaluate_var_decl(&mut self, name: Token, initializer: Option<Expr>) -> Result<Value, RuntimeError> {
         let value = match initializer {
             Some(expr) => self.evaluate(&expr)?,
             None => Value::Nil,
@@ -119,7 +133,19 @@ impl <'source>Interpreter <'source> {
         Ok(Value::Nil)
     } 
 
-    fn evaluate_assignment(&mut self, name: Token<'source>, value: Expr<'source>) -> Result<Value, RuntimeError> {
+    fn evaluate_if_statement(&mut self, cond: Expr, then_b: Stmt, else_b: Option<Stmt>) -> Result<Value, RuntimeError> {
+        let condition_val = self.evaluate(&cond)?;
+
+        if self.is_truthy(&condition_val) {
+           self.evaluate_block_statement(&[then_b], Environment::from_enclosing(self.environment.clone()))?; 
+        } else if  let Some(else_stmt) = else_b {
+            self.execute(else_stmt)?;
+        }
+
+        Ok(Value::Nil)
+    }
+
+    fn evaluate_assignment(&mut self, name: Token, value: Expr) -> Result<Value, RuntimeError> {
 
         let value = self.evaluate(&value)?;
 
@@ -137,7 +163,27 @@ impl <'source>Interpreter <'source> {
         }
     }
 
-    fn evaluate_unary(&mut self, operator: &Token, right: &Expr<'source>) -> Result<Value, RuntimeError> {
+    fn evaluate_logical(&mut self, lhs: &Expr, operator: &Token, rhs: &Expr) -> Result<Value, RuntimeError> {
+        let left = self.evaluate(lhs)?;
+        match operator.kind {
+            TokenType::Or => {
+                if self.is_truthy(&left) {
+                    Ok(left)
+                } else {
+                    self.evaluate(rhs)
+                }
+            }
+            TokenType::And => {
+                if !self.is_truthy(&left) {
+                    Ok(left)
+                } else {
+                    self.evaluate(rhs)
+                }
+            }
+            _ => unreachable!("Unknown logical operator.")
+        }
+    }
+    fn evaluate_unary(&mut self, operator: &Token, right: &Expr) -> Result<Value, RuntimeError> {
         let right_val = self.evaluate(right)?;
 
         match operator.kind {
@@ -150,7 +196,7 @@ impl <'source>Interpreter <'source> {
         }
     }
 
-    fn evaluate_binary (&mut self, left: &Expr<'source>, operator: &Token, right: &Expr<'source>) -> Result<Value, RuntimeError> {
+    fn evaluate_binary (&mut self, left: &Expr, operator: &Token, right: &Expr) -> Result<Value, RuntimeError> {
         let left_val = self.evaluate(left)?;
         let right_val = self.evaluate(right)?;
 
@@ -159,6 +205,10 @@ impl <'source>Interpreter <'source> {
 
 
         match operator.kind {
+            TokenType::Comma => {
+                self.evaluate(left)?;
+                self.evaluate(right)
+            }
             TokenType::Plus => match (left_val, right_val) {
                 (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l + r)),
                 (Value::String(l), Value::String(r)) => Ok(Value::String(l + &r)),
@@ -203,7 +253,7 @@ impl <'source>Interpreter <'source> {
         }
     }
 
-    fn evaluate_ternary(&mut self, condition: &Expr<'source>, true_expr: &Expr<'source>, false_expr: &Expr<'source>) -> Result<Value, RuntimeError> {
+    fn evaluate_ternary(&mut self, condition: &Expr, true_expr: &Expr, false_expr: &Expr) -> Result<Value, RuntimeError> {
         let condition_val = self.evaluate(condition)?;
         
         if self.is_truthy(&condition_val) {

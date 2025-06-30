@@ -35,6 +35,11 @@ pub enum Expr<'source> {
         true_expr: Box<Expr<'source>>,
         false_expr: Box<Expr<'source>>,
     },
+    Logical {
+        left: Box<Expr<'source>>,
+        operator: Token<'source>,
+        right: Box<Expr<'source>>,
+    },
     Literal(Literal),
     Grouping(Box<Expr<'source>>),
 }
@@ -77,6 +82,14 @@ impl <'source> Expr<'source> {
         }
     }
 
+    pub fn logical(left: Expr<'source>, op: Token<'source>, right: Expr<'source>) -> Self {
+        Self::Logical {
+            left: Box::new(left),
+            operator: op,
+            right: Box::new(right),
+        }
+    }
+
     pub fn literal(val: Literal) -> Self {
         Expr::Literal(val)
     }
@@ -107,6 +120,9 @@ impl fmt::Display for Expr<'_> {
             }
             Expr::Ternary { condition, true_expr, false_expr } => {
                 write!(f, "({} ? {} : {})", condition, true_expr, false_expr)
+            }
+            Expr::Logical { left, operator, right } => {
+                write!(f, "({} {} {})", left, operator, right)
             }
             Expr::Literal(lit) => write!(f, "{:#?}", lit),
             Expr::Grouping(expr) => write!(f, "(group {})", expr),

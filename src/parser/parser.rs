@@ -63,13 +63,33 @@ impl <'source> Parser<'source> {
     }
 
     fn statement(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
-        if self.matches(&[TokenType::Print]) {
+        if self.matches(&[TokenType::If]) {
+            self.if_statement()
+        } else if  self.matches(&[TokenType::Print]) {
             self.print_statement()
         } else if self.matches(&[TokenType::LeftBrace]) {
             self.block()
         } else {
             self.expression_statement()
         }
+    }
+
+    fn if_statement(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
+        self.consume(TokenType::LeftParen, "Expect '(' after 'if'.")?;
+        let cond= self.expr()?;
+        self.consume(TokenType::RightParen, "Expect ')' after condition.")?;
+
+        let then_br = self.statement()?;
+        let mut else_br: Option<Box<Stmt<'source>>> = None;
+        if self.matches(&[TokenType::Else]) {
+            else_br = Some(Box::new(self.statement()?));
+        }
+
+        Ok(Stmt::If {
+            condition: cond,
+            then_branch: Box::new(then_br), 
+            else_branch: else_br, 
+        })
     }
 
     fn print_statement(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
@@ -127,7 +147,7 @@ impl <'source> Parser<'source> {
     }
 
     fn assignment(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
-        let expr = self.ternary()?;
+        let expr = self.or()?;
         
         // Is the next token '='?
         if let Some(token) = self.peek() {
@@ -150,7 +170,37 @@ impl <'source> Parser<'source> {
         Ok(expr)
     }
 
+    fn or(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
+        let mut expr = self.and()?;
 
+        while let Some(token) = self.peek() {
+            if token.kind == TokenType::Or {
+                self.advance();
+                let op = self.previous().clone();
+                let rhs = self.and()?;
+                expr = expr::Expr::logical(expr, op, rhs)
+            } else {
+                break;
+            }
+        }
+        Ok(expr)
+    }
+
+    fn and(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
+        let mut expr = self.ternary()?;
+
+        while let Some(token) = self.peek() {
+            if token.kind == TokenType::And {
+                self.advance();
+                let op = self.previous().clone();
+                let rhs = self.ternary()?;
+                expr = expr::Expr::logical(expr, op, rhs) 
+            } else {
+                break;
+            }
+        }
+        Ok(expr)
+    }
     fn ternary(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
         let expr = self.equality()?;
 
