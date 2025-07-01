@@ -1,12 +1,7 @@
-var a = 0;
-var temp;
-
-for (var b = 1; a < 10000; b = temp + b) {
-  print a;
-  temp = a;
-  a = b;
+var i = 0;
+while (true) {
+    i = i + 1;
+    print i;
+    if (i >= 6) break;
 }
-
-var x = "Hey!";
-print x;
 

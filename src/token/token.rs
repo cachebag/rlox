@@ -53,7 +53,7 @@ pub enum TokenType {
 
     // Keywords
     And, Class, Else, False, Fun, For, If, Nil, Or,
-    Print, Return, Super, This, True, Var, While,
+    Print, Return, Super, This, True, Var, While, Break,
 
     Eof,
 }
@@ -127,6 +127,7 @@ impl fmt::Display for TokenType {
             TokenType::True => "true",
             TokenType::Var => "var",
             TokenType::While => "while",
+            TokenType::Break => "break",
             TokenType::Eof => "EOF",
         };
         write!(f, "{}", token_str)

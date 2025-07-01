@@ -40,6 +40,7 @@ static KEYWORDS: Lazy<RwLock<HashMap<&'static str, TokenType>>> = Lazy::new(|| {
     m.insert("true",         TokenType::True);
     m.insert("var",          TokenType::Var);
     m.insert("while",        TokenType::While);
+    m.insert("break",         TokenType::Break);
     RwLock::new(m)
 }); 
 

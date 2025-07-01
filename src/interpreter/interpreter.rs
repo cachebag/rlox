@@ -10,10 +10,10 @@ use crate::{
         expr::Expr, 
         stmt::Stmt
     }, 
-    environment::{
-        env::SharedEnv, 
-        env::Environment
-    }, 
+    environment::env::{
+        Environment, 
+        SharedEnv
+    },
     token::token::Literal
 };
 use crate::token::token::{ Token, TokenType };
@@ -36,7 +36,7 @@ impl Default for Interpreter {
     fn default() -> Self {
         Self::new()
     }
-}
+} 
 
 impl Interpreter {
 
@@ -106,6 +106,10 @@ impl Interpreter {
                 self.evaluate_while(condition, *body)?;
                 Ok(())
             }
+            Stmt::Break { keyword } => {
+                self.evaluate_break()?;
+                Ok(())
+            }
             // In jlox, you can define unitialized variables but if you use them they'll just be nil
             Stmt::Var { name, initializer } => {
                 self.evaluate_var_decl(name, initializer)?;
@@ -145,9 +149,17 @@ impl Interpreter {
             let cond_val = self.evaluate(&cond)?;
             self.is_truthy(&cond_val)
         } {
-            self.execute(body.clone())?
+            match self.execute(body.clone()) {
+                Err(RuntimeError::BreakException) => break,
+                Err(e) => return Err(e),
+                _ => {}
+            }
         }
         Ok(Value::Nil)
+    }
+
+    fn evaluate_break(&mut self) -> Result<(), RuntimeError> {
+        Err(RuntimeError::BreakException)
     }
 
     fn evaluate_if_statement(&mut self, cond: Expr, then_b: Stmt, else_b: Option<Stmt>) -> Result<Value, RuntimeError> {

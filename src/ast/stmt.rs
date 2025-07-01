@@ -35,5 +35,8 @@ pub enum Stmt<'source> {
     While {
         condition: Expr<'source>,
         body: Box<Stmt<'source>>,
+    },
+    Break {
+        keyword: Token<'source>,
     }
 }

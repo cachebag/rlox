@@ -25,6 +25,7 @@ pub enum ParserError<'source> {
     UnexpectedToken{ expected: TokenType, found: Token<'source>, line: usize },
     UnexpectedEof{ expected: String, line: usize },
     InvalidAssignmentTarget{ found: Token<'source>, line: usize },
+    BreakException{ line: usize },
 }
 
 pub enum RuntimeError {
@@ -37,6 +38,7 @@ pub enum RuntimeError {
     BinaryComp{ lexeme: String, line: usize },
     BinaryDBZ{ line: usize },
     UndefinedVariable{ found: String },
+    BreakException,
 }
 
 impl fmt::Display for RuntimeError {
@@ -67,6 +69,9 @@ impl fmt::Display for RuntimeError {
             RuntimeError::UndefinedVariable { found } => {
                 write!(f, "Undefined variable '{}'. ", found)
             }
+            RuntimeError::BreakException => {
+                write!(f, "Break statement execute.")
+            }
         }
     }
 }
@@ -90,6 +95,9 @@ impl fmt::Display for ParserError<'_> {
             }
             ParserError::InvalidAssignmentTarget { found, line } => {
                 write!(f, "Invalid assignment target '{}' on line {}", found, line)
+            }
+            ParserError::BreakException { line } => {
+                write!(f, "Cannot use break outside of a loop | Issue found on line {}.", line)
             }
         }
     }

@@ -25,6 +25,7 @@ use crate::{
 pub struct Parser<'source> {
     tokens: Vec<Token<'source>>,
     current: usize,
+    loop_depth: usize,
 }
 
 impl <'source> Parser<'source> {
@@ -33,6 +34,7 @@ impl <'source> Parser<'source> {
         Self {
             tokens,
             current: 0,
+            loop_depth: 0,
         }
     }
 
@@ -77,6 +79,8 @@ impl <'source> Parser<'source> {
             self.print_statement()
         } else if self.matches(&[TokenType::While]) {
             self.while_statement()
+        } else if self.matches(&[TokenType::Break]) {
+            self.break_statement()
         } else if self.matches(&[TokenType::LeftBrace]) {
             self.block()
         } else {
@@ -177,15 +181,26 @@ impl <'source> Parser<'source> {
     }
 
     fn while_statement(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
+        self.loop_depth += 1;
         self.consume(TokenType::LeftParen, "Expected '(' after 'while'.")?;
         let cond = self.expr()?;
         self.consume(TokenType::RightParen, "Expected ')' after condition.")?;
         let cond_body = self.statement()?;
+        self.loop_depth -= 1;
         Ok(Stmt::While { 
             condition: cond, 
             body: Box::new(cond_body),
         })
 
+    }
+
+    fn break_statement(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
+        if self.loop_depth == 0 {
+            return Err(ParserError::BreakException { line: self.current_line() })
+        }
+        let kword = self.previous().clone();
+        self.consume(TokenType::Semicolon, "Expected ';' after keyword.")?;
+        Ok(Stmt::Break { keyword: kword })
     }
 
     fn expression_statement(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
