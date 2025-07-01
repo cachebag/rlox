@@ -65,7 +65,9 @@ impl Interpreter {
             } => { self.evaluate_binary(left, operator, right) }
             Expr::Variable { 
                 name,
-            } => { self.environment.borrow().get(name )}
+            } => { 
+                self.environment.borrow().get(name)
+            }
             Expr::Grouping(inner) => self.evaluate(inner),
             Expr::Ternary {
                 condition,
@@ -134,7 +136,7 @@ impl Interpreter {
             None => Value::Nil,
         };
 
-        self.environment.borrow_mut().define(name.to_string(), value);
+        self.environment.borrow_mut().define(name.lexeme.to_string(), value);
         Ok(Value::Nil)
     } 
 
