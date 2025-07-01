@@ -2,8 +2,7 @@
 #### Yet another implementation of `jlox` in Rust, via _Robert Nystrom’s_ Crafting Interpreters
 #
 
-This isn't a line-for-line port and most certainly not the most robust implementation but nonetheless, the goal is for a faithful, idiomatic re-implementation 
-that tries to emphasize better error handling, clear separation of stages (scanning, parsing, interpreting), and extensibility toward bytecode compilation or static analysis in later phases.
+This isn't a line-for-line port but rather (an attempt at) a faithful, idiomatic re-implementation. More than anything, it's an exercise.  
 <br>
 <br>
 # Usage
