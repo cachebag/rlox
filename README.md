@@ -3,7 +3,7 @@
 #
 
 This isn't a line-for-line port but rather (an attempt at) a faithful, idiomatic re-implementation. More than anything, it's an exercise.  
-<br>
+
 # Usage
 Nothing to see here yet.
 # Resources
