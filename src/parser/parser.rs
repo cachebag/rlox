@@ -9,11 +9,17 @@
 //              recursively.
 
 
-use crate::{ ast::expr, 
+use crate::{
+    ast::{
+        expr, 
+        stmt::Stmt
+    }, 
     error::error::ParserError, 
-    token::token::{Token, Literal}, 
-    token::token::TokenType,
-    ast::stmt::Stmt
+    token::token::{
+        Literal, 
+        Token, 
+        TokenType
+    }
 };
 
 pub struct Parser<'source> {
@@ -63,7 +69,9 @@ impl <'source> Parser<'source> {
     }
 
     fn statement(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
-        if self.matches(&[TokenType::If]) {
+        if self.matches(&[TokenType::For]) {
+            self.for_statement()
+        } else if self.matches(&[TokenType::If]) {
             self.if_statement()
         } else if self.matches(&[TokenType::Print]) {
             self.print_statement()
@@ -74,6 +82,59 @@ impl <'source> Parser<'source> {
         } else {
             self.expression_statement()
         }
+    }
+
+    fn for_statement(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
+        // 1. Consume the 'for' keyword and expect a left parenthesis
+        self.consume(TokenType::LeftParen, "Expected '(' after 'for'.")?;
+        let initializer: Option<Stmt<'source>> = if self.matches(&[TokenType::Semicolon]) {
+            None
+        } else if self.matches(&[TokenType::Var]) {
+            Some(self.var_declaration()?)
+        } else {
+            Some(self.expression_statement()?)  
+        };
+        
+        // 2. Parse the condition and advance to the next token
+        let cond = if !self.check(&[TokenType::Semicolon]) {
+            Some(self.expr()?)
+        } else {
+            None
+        };
+        self.consume(TokenType::Semicolon, "Expected ';' after loop condition.")?;
+
+        // 3. Parse the increment expression
+        let increment = if !self.check(&[TokenType::RightParen]) {
+            Some(self.expr()?)
+        } else {
+            None
+        };
+
+        self.consume(TokenType::RightParen, "Expect ')' after for clauses.")?;
+
+        let mut body = self.statement()?;
+
+        if let Some(inc) = increment {
+            body = Stmt::Block(vec![
+                body, 
+                Stmt::Expression(inc)
+            ]);
+        }
+
+        let cond = cond.unwrap_or(expr::Expr::Literal(Literal::True));
+        body = Stmt::While {
+            condition: cond, 
+            body: Box::new(body) 
+        };
+
+        if let Some(init) = initializer {
+            body = Stmt::Block(vec![
+                init,
+                body
+            ]);
+        }
+
+        Ok(body)
     }
 
     fn if_statement(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
@@ -108,7 +169,7 @@ impl <'source> Parser<'source> {
             init = Some(self.expr()?);
         }
 
-        self.consume(TokenType::Semicolon, "Expect ';' after value.").unwrap();
+        self.consume(TokenType::Semicolon, "Expect ';' after value.")?;
         Ok(Stmt::Var { 
             name: value, 
             initializer: init 
@@ -151,7 +212,7 @@ impl <'source> Parser<'source> {
                     TokenType::Comma => {
                         self.advance();
                         let operator = self.previous().clone();
-                        let right = self.ternary()?;
+                        let right = self.assignment()?;
                         expr = expr::Expr::binary(expr, operator, right);
                     }
                     _ => break,

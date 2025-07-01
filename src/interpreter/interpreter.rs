@@ -80,15 +80,16 @@ impl Interpreter {
         match stmt {
             Stmt::Block(statements) => {
                 let new_env = Environment::from_enclosing(self.environment.clone());
-                self.execute_block(&statements, new_env)
+                self.execute_block(&statements, new_env)?;
+                Ok(())
             }
             Stmt::Expression(expr) => {
                 self.evaluate(&expr)?;
                 Ok(())
             },
             Stmt::If {
-                condition, 
-                then_branch, 
+                condition,
+                then_branch,
                 else_branch 
             } => {
                 self.evaluate_if_statement(condition, *then_branch, else_branch.map(|b| *b))?;
@@ -99,6 +100,10 @@ impl Interpreter {
                 println!("{}", value);
                 Ok(())
             },
+            Stmt::While { condition, body } => {
+                self.evaluate_while(condition, *body)?;
+                Ok(())
+            }
             // In jlox, you can define unitialized variables but if you use them they'll just be nil
             Stmt::Var { name, initializer } => {
                 self.evaluate_var_decl(name, initializer)?;
@@ -134,9 +139,11 @@ impl Interpreter {
     } 
 
     fn evaluate_while(&mut self, cond: Expr, body: Stmt) -> Result<Value, RuntimeError> {
-        let cond = self.evaluate(&cond)?;
-        if self.is_truthy(&cond) {
-            self.execute(body)?
+        while {
+            let cond_val = self.evaluate(&cond)?;
+            self.is_truthy(&cond_val)
+        } {
+            self.execute(body.clone())?
         }
         Ok(Value::Nil)
     }

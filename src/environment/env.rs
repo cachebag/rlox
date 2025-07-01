@@ -59,8 +59,9 @@ impl Environment {
 
 
     pub fn assign(&mut self, name: Token, val: &Value) -> Result<Value, RuntimeError> {
-        if self.values.contains_key(name.lexeme) {
-            self.values.insert(name.lexeme.to_string(), val.clone());
+        let key = name.lexeme.to_string();
+        if self.values.contains_key(&key) {
+            self.values.insert(key, val.clone());
             Ok(val.clone())
         } else if let Some(enclosing) = &self.enclosing {
             enclosing.borrow_mut().assign(name, val)
