@@ -23,6 +23,11 @@ pub enum Expr<'source> {
         operator: Token<'source>,
         right: Box<Expr<'source>>,
     },
+    Call {
+        callee: Box<Expr<'source>>,
+        paren: Token<'source>,
+        args: Vec<Expr<'source>>,
+    },
     Unary {
         operator: Token<'source>,
         right: Box<Expr<'source>>,
@@ -58,6 +63,14 @@ impl <'source> Expr<'source> {
             left: Box::new(left),
             operator: op,
             right:Box::new(right),
+        }
+    }
+
+    pub fn call(callee: Expr<'source>, parentheses: Token<'source>, arguments: Vec<Expr<'source>>) -> Self {
+        Self::Call {
+            callee: Box::new(callee),
+            paren: parentheses,
+            args: arguments,
         }
     }
 
@@ -111,6 +124,9 @@ impl fmt::Display for Expr<'_> {
             }
             Expr::Binary { left, operator, right } => {
                 write!(f, "({} {} {})", operator.lexeme, left, right)
+            }
+            Expr::Call { callee, paren, args } => {
+                write!(f, "({} {} {:?})", callee, paren, args)
             }
             Expr::Unary { operator, right } => {
                 write!(f, "({} {})", operator.lexeme, right)

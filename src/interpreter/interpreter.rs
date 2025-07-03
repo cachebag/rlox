@@ -57,6 +57,7 @@ impl Interpreter {
         match expr {
             Expr::Literal(lit) => self.evaluate_literal(lit),
             Expr::Unary { operator, right } => { self.evaluate_unary(operator, right) }
+            Expr::Call { callee, paren, args } => { todo!() }
             Expr::Assign { name, value } => { self.evaluate_assignment(name.clone(), (**value).clone()) }
             Expr::Binary {
                 left,

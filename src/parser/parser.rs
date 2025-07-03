@@ -9,6 +9,8 @@
 //              recursively.
 
 
+use std::{fmt::Arguments, io::Stdout};
+
 use crate::{
     ast::{
         expr, 
@@ -396,7 +398,42 @@ impl <'source> Parser<'source> {
                 _ => {}
             }
         }
-        self.primary()
+        self.call()
+    }
+
+    fn finish_call(&mut self, callee: expr::Expr<'source>) -> Result<expr::Expr<'source>, ParserError<'source>> {
+        let mut arguments: Vec<expr::Expr<'source>> = Vec::new();
+
+        if !self.check(&[TokenType::RightParen]) {
+            loop {
+                arguments.push(self.expr()?);
+
+                if self.check(&[TokenType::Comma]) {
+                    break;
+                }
+            }
+        }
+
+        let parentheses = self.consume(TokenType::RightParen, "Expect ')' after arguments.")?;
+        Ok(expr::Expr::Call {
+            callee: Box::new(callee), 
+            paren: parentheses, 
+            args: arguments, 
+        })
+    } 
+
+    fn call(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
+        let mut expr = self.primary()?;
+
+        if let Some(token) = self.peek() {
+            match token.kind {
+                TokenType::LeftParen => {
+                    expr = self.finish_call(expr)?;
+                }
+                _ => {}
+            }
+        }
+        Ok(expr)
     }
 
     fn primary(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
