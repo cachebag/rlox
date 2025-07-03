@@ -78,8 +78,22 @@ impl <'source> Scanner<'source> {
             Some('}') => self.add_token(TokenType::RightBrace),
             Some(',') => self.add_token(TokenType::Comma),
             Some('.') => self.add_token(TokenType::Dot),
-            Some('-') => self.add_token(TokenType::Minus),
-            Some('+') => self.add_token(TokenType::Plus),
+            Some('-') => {
+                let kind = if self.match_char('-') {
+                    TokenType::Decrement
+                } else {
+                    TokenType::Minus
+                };
+                self.add_token(kind);
+            },
+            Some('+') => {
+                let kind = if self.match_char('+') {
+                    TokenType::Increment
+                } else {
+                    TokenType::Plus
+                };
+                self.add_token(kind);
+            },
             Some(';') => self.add_token(TokenType::Semicolon),
             Some('*') => self.add_token(TokenType::Star),
             Some('?') => self.add_token(TokenType::Question),

@@ -37,7 +37,7 @@ pub enum Literal {
     Nil,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenType {
     // Single-character tokens
     LeftParen, RightParen, LeftBrace, RightBrace,
@@ -47,6 +47,7 @@ pub enum TokenType {
     // One or two character tokens
     Bang, BangEqual, Equal, EqualEqual,
     Greater, GreaterEqual, Less, LessEqual,
+    Increment, Decrement,
 
     // Literals
     Identifier, String, Number,
@@ -104,6 +105,8 @@ impl fmt::Display for TokenType {
             TokenType::GreaterEqual => ">=",
             TokenType::Less => "<",
             TokenType::LessEqual => "<=",
+            TokenType::Increment => "++",
+            TokenType::Decrement => "--",
             
             // Literals
             TokenType::Identifier => "IDENTIFIER",

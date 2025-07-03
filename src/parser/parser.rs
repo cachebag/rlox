@@ -421,18 +421,23 @@ impl <'source> Parser<'source> {
             args: arguments, 
         })
     } 
-
+    
     fn call(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
         let mut expr = self.primary()?;
 
-        if let Some(token) = self.peek() {
-            match token.kind {
-                TokenType::LeftParen => {
+        loop {
+            match self.peek().map(|t| t.kind) {
+                Some(TokenType::LeftParen) => {
                     expr = self.finish_call(expr)?;
                 }
-                _ => {}
+                Some(TokenType::Increment | TokenType::Decrement) => {
+                    let operator = self.advance().clone();
+                    expr = expr::Expr::mutate(operator, expr, true); // postfix = true
+                }
+                _ => break,
             }
         }
+
         Ok(expr)
     }
 

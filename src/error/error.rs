@@ -39,6 +39,7 @@ pub enum RuntimeError {
     BinaryDBZ{ line: usize },
     UndefinedVariable{ found: String },
     BreakException,
+    MutationError{ lexeme: String, line: usize },
 }
 
 impl fmt::Display for RuntimeError {
@@ -71,6 +72,9 @@ impl fmt::Display for RuntimeError {
             }
             RuntimeError::BreakException => {
                 write!(f, "Break statement execute.")
+            }
+            RuntimeError::MutationError { lexeme, line } => {
+                write!(f, "Mutation attempted on illegal expression |'{}' line: {}", lexeme, line)
             }
         }
     }

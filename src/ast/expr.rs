@@ -32,6 +32,11 @@ pub enum Expr<'source> {
         operator: Token<'source>,
         right: Box<Expr<'source>>,
     },
+    Mutate {
+        operator: Token<'source>,
+        operand: Box<Expr<'source>>,
+        postfix: bool,
+    },
     Variable {
         name: Token<'source>,
     },
@@ -78,6 +83,14 @@ impl <'source> Expr<'source> {
         Self::Unary { 
             operator: op,
             right: Box::new(right),
+        }
+    }
+
+    pub fn mutate(opt: Token<'source>, op: Expr<'source>, pfix: bool) -> Self {
+        Self::Mutate {
+            operator: opt,
+            operand: Box::new(op),
+            postfix: pfix,
         }
     }
 
@@ -130,6 +143,9 @@ impl fmt::Display for Expr<'_> {
             }
             Expr::Unary { operator, right } => {
                 write!(f, "({} {})", operator.lexeme, right)
+            }
+            Expr::Mutate { operator, operand, postfix } => {
+                write!(f, "({} {} {})", operator.lexeme, operand, postfix)
             }
             Expr::Variable { name} => {
                 write!(f, "({})", name.lexeme)
