@@ -40,6 +40,8 @@ pub enum RuntimeError {
     UndefinedVariable{ found: String },
     BreakException,
     MutationError{ lexeme: String, line: usize },
+    FunctionError{ lexeme: String, line: usize, message: String },
+    Return{ lexeme: usize },
 }
 
 impl fmt::Display for RuntimeError {
@@ -75,6 +77,12 @@ impl fmt::Display for RuntimeError {
             }
             RuntimeError::MutationError { lexeme, line } => {
                 write!(f, "Mutation attempted on illegal expression |'{}' line: {}", lexeme, line)
+            }
+            RuntimeError::FunctionError { lexeme, line, message } => {
+                write!(f, "Here {} on line {} - {}", lexeme, line, message)
+            }
+            RuntimeError::Return { lexeme } => {
+                write!(f, "{}", lexeme)
             }
         }
     }

@@ -29,7 +29,7 @@ static KEYWORDS: Lazy<RwLock<HashMap<&'static str, TokenType>>> = Lazy::new(|| {
     m.insert("else",         TokenType::Else);
     m.insert("false",        TokenType::False);
     m.insert("for",          TokenType::For);
-    m.insert("fun",          TokenType::Fun);
+    m.insert("fn",          TokenType::Fn);
     m.insert("if",           TokenType::If);
     m.insert("nil",          TokenType::Nil);
     m.insert("or",           TokenType::Or);

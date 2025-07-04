@@ -3,9 +3,9 @@ use crate::token::token::Token;
 
 #[derive(Debug, Clone)]
 pub struct FunctionDecl<'source> {
-    name: Token<'source>,
-    params: Vec<Token<'source>>,
-    body: Vec<Stmt<'source>>,
+    pub name: Token<'source>,
+    pub params: Vec<Token<'source>>,
+    pub body: Vec<Stmt<'source>>,
 }
 
 #[derive(Debug, Clone)]

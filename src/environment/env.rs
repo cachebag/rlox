@@ -17,34 +17,34 @@ use std::{
 use crate::{error::error::{RuntimeError}, interpreter::Value};
 use crate::token::token::Token;
 
-pub type SharedEnv = Rc<RefCell<Environment>>;
+pub type SharedEnv<'source> = Rc<RefCell<Environment<'source>>>;
 
-pub struct Environment {
-    enclosing: Option<SharedEnv>,
-    values: HashMap<String, Value>,
+pub struct Environment<'source> {
+    enclosing: Option<SharedEnv<'source>>,
+    values: HashMap<String, Value<'source>>,
 }
 
-impl Environment {
+impl <'source> Environment<'source> {
     
-    pub fn new() -> SharedEnv {
+    pub fn new() -> SharedEnv<'source> {
         Rc::new(RefCell::new(Self {
             values: HashMap::new(),
             enclosing: None,
         }))
     }
 
-    pub fn from_enclosing(enclosing: SharedEnv) -> SharedEnv {
+    pub fn from_enclosing(enclosing: SharedEnv<'source>) -> SharedEnv<'source> {
         Rc::new(RefCell::new(Self {
             values: HashMap::new(),
             enclosing: Some(enclosing),
         }))
     }
 
-    pub fn define(&mut self, name: String, val: Value) {
+    pub fn define(&mut self, name: String, val: Value<'source>) {
         self.values.insert(name, val);
     }
 
-    pub fn get(&self, name: &Token) -> Result<Value, RuntimeError> {
+    pub fn get(&self, name: &Token) -> Result<Value<'source>, RuntimeError> {
         if let Some(val) = self.values.get(name.lexeme) {
             Ok(val.clone())
         } else if let Some(enclosing) = &self.enclosing {
@@ -58,7 +58,7 @@ impl Environment {
  
 
 
-    pub fn assign(&mut self, name: Token, val: &Value) -> Result<Value, RuntimeError> {
+    pub fn assign(&mut self, name: Token, val: &Value<'source>) -> Result<Value<'source>, RuntimeError> {
         let key = name.lexeme.to_string();
         if self.values.contains_key(&key) {
             self.values.insert(key, val.clone());

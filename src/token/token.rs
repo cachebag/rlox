@@ -53,7 +53,7 @@ pub enum TokenType {
     Identifier, String, Number,
 
     // Keywords
-    And, Class, Else, False, Fun, For, If, Nil, Or,
+    And, Class, Else, False, Fn, For, If, Nil, Or,
     Print, Return, Super, This, True, Var, While, Break,
 
     Eof,
@@ -118,7 +118,7 @@ impl fmt::Display for TokenType {
             TokenType::Class => "class",
             TokenType::Else => "else",
             TokenType::False => "false",
-            TokenType::Fun => "fun",
+            TokenType::Fn => "fn",
             TokenType::For => "for",
             TokenType::If => "if",
             TokenType::Nil => "nil",

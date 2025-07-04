@@ -9,19 +9,17 @@
 //              recursively.
 
 
-use std::{fmt::Arguments, io::Stdout};
-
 use crate::{
     ast::{
         expr, 
-        stmt::Stmt
+        stmt::{FunctionDecl, Stmt}
     }, 
     error::error::ParserError, 
-    token::token::{
+    token::{token::{
         Literal, 
         Token, 
         TokenType
-    }
+    }}
 };
 
 pub struct Parser<'source> {
@@ -44,7 +42,7 @@ impl <'source> Parser<'source> {
         let mut statements = Vec::new();
 
         while !self.is_at_end() {
-            if let Some(stmt) = self.declaration() {
+            if let Some(stmt) = self.declaration()? {
                 statements.push(stmt);
             }
         }
@@ -56,18 +54,21 @@ impl <'source> Parser<'source> {
         self.comma()
     }
 
-    fn declaration(&mut self) -> Option<Stmt<'source>> {
+    fn declaration(&mut self) -> Result<Option<Stmt<'source>>, ParserError<'source>> {
         let result = if self.matches(&[TokenType::Var]) {
             self.var_declaration()
+        } else if self.matches(&[TokenType::Fn]) {
+            let token = self.previous();
+            self.function(token.clone())
         } else {
             self.statement()
         };
 
         match result {
-            Ok(stmt) => Some(stmt),
+            Ok(stmt) => Ok(Some(stmt)),
             Err(_) => {
                 self.synchronize();
-                None
+                Ok(None)
             }
         }
     }
@@ -84,7 +85,8 @@ impl <'source> Parser<'source> {
         } else if self.matches(&[TokenType::Break]) {
             self.break_statement()
         } else if self.matches(&[TokenType::LeftBrace]) {
-            self.block()
+            let block_stmts = self.block()?;
+            Ok(Stmt::Block(block_stmts))
         } else {
             self.expression_statement()
         }
@@ -211,14 +213,45 @@ impl <'source> Parser<'source> {
         Ok(Stmt::Expression(expression))
     }
 
-    fn block(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
+    fn function(&mut self, kind: Token<'source>) -> Result<Stmt<'source>, ParserError<'source>> {
+        let name = self.consume(TokenType::Identifier, &format!("Expect {} name.", kind))?;
+        self.consume(TokenType::LeftParen, &format!("Expect '(' after {} name.", kind))?;
+
+        let mut parameters = Vec::new();
+        if self.check(&[TokenType::RightParen]) {
+            loop {
+                if parameters.len() >= 255 {
+                    eprintln!("Can't have more than 255 parameters.");
+                }
+                parameters.push(self.consume(TokenType::Identifier, "Expect parameter name.")?);
+
+                if self.check(&[TokenType::Comma]) {
+                    break;
+                }
+            } 
+        }
+        self.consume(TokenType::RightParen, "Expect ')' after parameters.")?;
+        self.consume(TokenType::LeftBrace, &format!("Expect '{{' before {} name.", kind))?;
+        let body = self.block()?;
+
+        let decl = FunctionDecl {
+            name, 
+            params: parameters,
+            body,
+        };
+        Ok(Stmt::Function(decl))
+    }
+
+    fn block(&mut self) -> Result<Vec<Stmt<'source>>, ParserError<'source>> {
         let mut statements: Vec<Stmt<'source>> = Vec::new();
         while !self.check(&[TokenType::RightBrace]) && !self.is_at_end() {
-            statements.push(self.declaration().unwrap());
+            if let Some(stmt) = self.declaration()? {
+                statements.push(stmt);
+            }
         }
 
         self.consume(TokenType::RightBrace, "Expect '}' after block.")?;
-        Ok(Stmt::Block(statements))
+        Ok(statements)
     }
 
     fn comma(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
@@ -406,6 +439,9 @@ impl <'source> Parser<'source> {
 
         if !self.check(&[TokenType::RightParen]) {
             loop {
+                if arguments.len() >= 255 {
+                    eprintln!("Can't have more than 255 arguments.");
+                }
                 arguments.push(self.expr()?);
 
                 if self.check(&[TokenType::Comma]) {
@@ -499,7 +535,7 @@ impl <'source> Parser<'source> {
             match self.peek() {
                 Some(token) => match token.kind {
                     TokenType::Class
-                    | TokenType::Fun
+                    | TokenType::Fn
                     | TokenType::Var
                     | TokenType::For
                     | TokenType::If
