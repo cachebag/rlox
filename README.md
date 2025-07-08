@@ -14,8 +14,10 @@ cargo build --release
 2. Run REPL (currently stateless)
 ```zsh
 cargo run
+
 > print "Hello, world!";
 Hello, World!
+
 > 10 != 100 ? print "true" : print "false";
 false
 ```
