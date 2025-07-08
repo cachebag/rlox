@@ -58,7 +58,6 @@ fn run_prompt() {
 }
 
 fn run<'source>(source: &'source str, interpreter: &mut Interpreter<'source>) {
-    // Scanner: source -> tokens
     let mut scanner = Scanner::new(source);
     let tokens = match scanner.scan_tokens() {
         Ok(tokens) => tokens,
@@ -68,26 +67,32 @@ fn run<'source>(source: &'source str, interpreter: &mut Interpreter<'source>) {
         }
     };
 
-    // Try to parse as statements first
     let mut parser = Parser::new(tokens.clone());
     match parser.parse() {
         Ok(statements) if !statements.is_empty() => {
-            if let Err(e) = interpreter.interpret(statements) {
-                eprintln!("Runtime error: {}", e);
+            for stmt in statements {
+                if let Err(e) = interpreter.execute(stmt) {
+                    eprintln!("Runtime error: {}", e);
+                }
             }
         }
-        _ => {
-            let mut expr_parser = Parser::new(tokens);
-            match expr_parser.expr() {
-                Ok(expr) => match interpreter.evaluate(expr) {
-                    Ok(value) => {
-                        if !matches!(value, Value::Nil) {
-                            println!("{}", value);
+        Ok(_) | Err(_) => {
+            // Fallback to expression evaluation only if the input doesn't include a semicolon
+            if !source.contains(';') {
+                let mut expr_parser = Parser::new(tokens);
+                match expr_parser.expr() {
+                    Ok(expr) => match interpreter.evaluate(expr) {
+                        Ok(value) => {
+                            if !matches!(value, Value::Nil) {
+                                println!("{}", value);
+                            }
                         }
-                    }
-                    Err(e) => eprintln!("Runtime error: {}", e),
-                },
-                Err(e) => eprintln!("Parser error: {}", e),
+                        Err(e) => eprintln!("Runtime error: {}", e),
+                    },
+                    Err(e) => eprintln!("Parser error: {}", e),
+                }
+            } else {
+                eprintln!("Parser error: could not parse input as statement(s)");
             }
         }
     }

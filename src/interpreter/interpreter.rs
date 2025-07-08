@@ -2,16 +2,19 @@
 // author: akrm al-hakimi
 // our interpreter
 
-use core::fmt;
-use std::rc::Rc;
-use crate::{callable::callable::{Callable, Clock}, error::error::RuntimeError};
-use crate::token::token::{Token, TokenType};
+use crate::{ast::stmt::FunctionDecl, token::token::{Token, TokenType}};
 use crate::{
     ast::{expr::Expr, stmt::Stmt},
     environment::env::{Environment, SharedEnv},
+    function::function::Function,
     token::token::Literal,
-    function::function::Function
 };
+use crate::{
+    callable::callable::{Callable, Clock},
+    error::error::RuntimeError,
+};
+use core::fmt;
+use std::rc::Rc;
 
 pub struct Interpreter<'source> {
     pub globals: SharedEnv<'source>,
@@ -27,7 +30,7 @@ pub enum Value<'source> {
     Callable(Rc<dyn Callable<'source> + 'source>),
 }
 
-impl <'source> PartialEq for Value<'source> {
+impl PartialEq for Value<'_> {
     fn eq(&self, other: &Self) -> bool {
         use Value::*;
         match (self, other) {
@@ -43,16 +46,18 @@ impl <'source> PartialEq for Value<'source> {
 }
 
 #[allow(clippy::needless_lifetimes)]
-impl <'source> Default for Interpreter<'source> {
+impl<'source> Default for Interpreter<'source> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl <'source> Interpreter<'source> {
+impl<'source> Interpreter<'source> {
     pub fn new() -> Self {
-        let globals= Environment::new();
-        globals.borrow_mut().define("clock".to_string(), Value::Callable(Rc::new(Clock)));
+        let globals = Environment::new();
+        globals
+            .borrow_mut()
+            .define("clock".to_string(), Value::Callable(Rc::new(Clock)));
 
         Interpreter {
             globals: globals.clone(),
@@ -80,12 +85,8 @@ impl <'source> Interpreter<'source> {
                 callee,
                 paren,
                 args,
-            } => {
-                todo!()
-            }
-            Expr::Assign { name, value } => {
-                self.evaluate_assignment(name.clone(), *value)
-            }
+            } => self.evaluate_call(*callee, paren, args),
+            Expr::Assign { name, value } => self.evaluate_assignment(name.clone(), *value),
             Expr::Binary {
                 left,
                 operator,
@@ -106,22 +107,21 @@ impl <'source> Interpreter<'source> {
         }
     }
 
-    fn evaluate_function(&mut self, stmt: Stmt<'source>) -> Result<(), RuntimeError> {
-        if let Stmt::Function(declaration)= stmt {
-            let function = Function { declaration: declaration.clone() };
-            self.environment
-                .borrow_mut()
-                .define(
-                    declaration.name.lexeme.to_string(),
-                    Value::Callable(Rc::new(function)),
-                );
+    fn evaluate_function(&mut self, decl: FunctionDecl<'source>) -> Result<(), RuntimeError> {
+        let function = Function {
+            declaration: decl.clone(),
+            closure: self.environment.clone(),
+        };
+        self.environment
+            .borrow_mut()
+            .define(
+                decl.name.lexeme.to_string(),
+                Value::Callable(Rc::new(function)),
+            );
             Ok(())
-        } else {
-            unreachable!("evaluate_function called on non-function statement.")
-        }
     }
 
-    fn execute(&mut self, stmt: Stmt<'source>) -> Result<(), RuntimeError> {
+    pub fn execute(&mut self, stmt: Stmt<'source>) -> Result<(), RuntimeError> {
         match stmt {
             Stmt::Block(statements) => {
                 let new_env = Environment::from_enclosing(self.environment.clone());
@@ -132,6 +132,7 @@ impl <'source> Interpreter<'source> {
                 self.evaluate(expr)?;
                 Ok(())
             }
+            Stmt::Function(decl) => self.evaluate_function(decl),
             Stmt::If {
                 condition,
                 then_branch,
@@ -149,7 +150,7 @@ impl <'source> Interpreter<'source> {
                 self.evaluate_while(condition, *body)?;
                 Ok(())
             }
-            Stmt::Break { keyword : _} => {
+            Stmt::Break { keyword: _ } => {
                 self.evaluate_break()?;
                 Ok(())
             }
@@ -203,7 +204,11 @@ impl <'source> Interpreter<'source> {
         Ok(Value::Nil)
     }
 
-    fn evaluate_while(&mut self, cond: Expr<'source>, body: Stmt<'source>) -> Result<Value<'source>, RuntimeError> {
+    fn evaluate_while(
+        &mut self,
+        cond: Expr<'source>,
+        body: Stmt<'source>,
+    ) -> Result<Value<'source>, RuntimeError> {
         while {
             let cond_val = self.evaluate(cond.clone())?;
             self.is_truthy(&cond_val)
@@ -229,7 +234,6 @@ impl <'source> Interpreter<'source> {
     ) -> Result<Value<'source>, RuntimeError> {
         let condition_val = self.evaluate(cond)?;
 
-
         if self.is_truthy(&condition_val) {
             self.evaluate_block_statement(
                 &[then_b],
@@ -242,7 +246,11 @@ impl <'source> Interpreter<'source> {
         Ok(Value::Nil)
     }
 
-    fn evaluate_assignment(&mut self, name: Token, value: Expr<'source>) -> Result<Value<'source>, RuntimeError> {
+    fn evaluate_assignment(
+        &mut self,
+        name: Token,
+        value: Expr<'source>,
+    ) -> Result<Value<'source>, RuntimeError> {
         let value = self.evaluate(value)?;
 
         self.environment.borrow_mut().assign(name, &value)?;
@@ -284,7 +292,11 @@ impl <'source> Interpreter<'source> {
             _ => unreachable!("Unknown logical operator."),
         }
     }
-    fn evaluate_unary(&mut self, operator: Token, right: &Expr<'source>) -> Result<Value<'source>, RuntimeError> {
+    fn evaluate_unary(
+        &mut self,
+        operator: Token,
+        right: &Expr<'source>,
+    ) -> Result<Value<'source>, RuntimeError> {
         let right_val = self.evaluate(right.clone())?;
 
         match operator.kind {
@@ -310,8 +322,8 @@ impl <'source> Interpreter<'source> {
             Expr::Variable { name } => name,
             _ => {
                 return Err(RuntimeError::MutationError {
-                    lexeme: operator.lexeme.to_string(), 
-                    line: operator.line 
+                    lexeme: operator.lexeme.to_string(),
+                    line: operator.line,
                 });
             }
         };
@@ -359,13 +371,12 @@ impl <'source> Interpreter<'source> {
     ) -> Result<Value<'source>, RuntimeError> {
         let left_val = self.evaluate(left.clone())?;
         let right_val = self.evaluate(right.clone())?;
-
         let lexeme = operator.lexeme.to_string();
         let line = operator.line;
 
         match operator.kind {
             TokenType::Comma => {
-    self.evaluate(left)?;
+                self.evaluate(left)?;
                 self.evaluate(right)
             }
             TokenType::Plus => match (left_val, right_val) {
@@ -412,7 +423,12 @@ impl <'source> Interpreter<'source> {
         }
     }
 
-    fn evaluate_call(&mut self, callee: Expr<'source>, paren: Token<'source>, args: Vec<Expr<'source>>) -> Result<Value<'source>, RuntimeError> {
+    fn evaluate_call(
+        &mut self,
+        callee: Expr<'source>,
+        paren: Token<'source>,
+        args: Vec<Expr<'source>>,
+    ) -> Result<Value<'source>, RuntimeError> {
         let callee = self.evaluate(callee)?;
         let mut arguments: Vec<Value<'source>> = Vec::new();
 
@@ -427,7 +443,7 @@ impl <'source> Interpreter<'source> {
                     lexeme: paren.to_string(),
                     line: paren.line,
                     message: "Can only call functions and classes.".to_string(),
-                })
+                });
             }
         };
 
@@ -440,6 +456,7 @@ impl <'source> Interpreter<'source> {
         }
 
         function.call(self, arguments)
+
     }
 
     fn evaluate_ternary(
@@ -466,14 +483,14 @@ impl <'source> Interpreter<'source> {
     }
 }
 
-impl <'source> fmt::Display for Value<'source> {
+impl fmt::Display for Value<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Value::String(s) => write!(f, "{}", s),
             Value::Number(n) => write!(f, "{}", n),
             Value::Bool(b) => write!(f, "{}", b),
             Value::Nil => write!(f, "nil"),
-            Value::Callable(c) => write!(f, "{:?}", c)
+            Value::Callable(c) => write!(f, "{:?}", c),
         }
     }
 }

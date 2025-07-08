@@ -1,3 +1,5 @@
-for (var a = 0; a < 11; a = a + 1) {
-  print a;
+fn sayHi(first,last) {
+  print "Hi, " + first + " " + last + "!";
 }
+
+sayHi("Dear", "Reader");

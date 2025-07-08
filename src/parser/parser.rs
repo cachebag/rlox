@@ -80,6 +80,8 @@ impl <'source> Parser<'source> {
             self.if_statement()
         } else if self.matches(&[TokenType::Print]) {
             self.print_statement()
+        } else if self.matches(&[TokenType::Return]) {
+            self.return_statement()
         } else if self.matches(&[TokenType::While]) {
             self.while_statement()
         } else if self.matches(&[TokenType::Break]) {
@@ -218,18 +220,21 @@ impl <'source> Parser<'source> {
         self.consume(TokenType::LeftParen, &format!("Expect '(' after {} name.", kind))?;
 
         let mut parameters = Vec::new();
-        if self.check(&[TokenType::RightParen]) {
+        if !self.check(&[TokenType::RightParen]) {
             loop {
                 if parameters.len() >= 255 {
                     eprintln!("Can't have more than 255 parameters.");
                 }
                 parameters.push(self.consume(TokenType::Identifier, "Expect parameter name.")?);
 
-                if self.check(&[TokenType::Comma]) {
+                if !self.check(&[TokenType::RightParen]) {
+                    self.consume(TokenType::Comma, "Expect ',' between parameters.")?;
+                } else {
                     break;
                 }
             } 
         }
+
         self.consume(TokenType::RightParen, "Expect ')' after parameters.")?;
         self.consume(TokenType::LeftBrace, &format!("Expect '{{' before {} name.", kind))?;
         let body = self.block()?;
@@ -442,9 +447,9 @@ impl <'source> Parser<'source> {
                 if arguments.len() >= 255 {
                     eprintln!("Can't have more than 255 arguments.");
                 }
-                arguments.push(self.expr()?);
+                arguments.push(self.assignment()?);
 
-                if self.check(&[TokenType::Comma]) {
+                if !self.matches(&[TokenType::Comma]) {
                     break;
                 }
             }
@@ -464,6 +469,7 @@ impl <'source> Parser<'source> {
         loop {
             match self.peek().map(|t| t.kind) {
                 Some(TokenType::LeftParen) => {
+                    self.advance();
                     expr = self.finish_call(expr)?;
                 }
                 Some(TokenType::Increment | TokenType::Decrement) => {
