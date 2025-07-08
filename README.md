@@ -7,7 +7,7 @@ This isn't a line-for-line port but rather (an attempt at) a faithful, idiomatic
 # Usage
 1. Clone and build
 ```zsh
-git clone https://github.com/youruser/rlox.git
+git clone https://github.com/cachebag/rlox.git
 cd rlox
 cargo build --release
 ```
