@@ -1,4 +1,4 @@
-# rlox 
+# rlox 🦀
 #### Yet another implementation of `jlox` in Rust, via _Robert Nystrom’s_ Crafting Interpreters
 #
 
