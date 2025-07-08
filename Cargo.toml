@@ -5,3 +5,7 @@ edition = "2024"
 
 [dependencies]
 once_cell = "1.21.3"
+
+[[bin]]
+name = "rlox"
+path = "src/main.rs"
