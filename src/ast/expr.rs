@@ -8,8 +8,11 @@
 //             recursion in types. This is still simpler than Java's visitor pattern because 
 //             we can use the Display trait to traverse and print expressions directly.
 
-use crate::token::{Token, Literal};
-use std::fmt;
+use crate::{
+    token::{Token, Literal},
+    ast::stmt::Stmt,
+};
+use std::{fmt};
 
 #[derive(Debug, Clone)]
 pub enum Expr<'source> {
@@ -48,6 +51,10 @@ pub enum Expr<'source> {
         left: Box<Expr<'source>>,
         operator: Token<'source>,
         right: Box<Expr<'source>>,
+    },
+    Lambda {
+        params: Vec<Token<'source>>,
+        body: Vec<Stmt<'source>>, 
     },
     Literal(Literal),
     Grouping(Box<Expr<'source>>),
@@ -123,6 +130,13 @@ impl <'source> Expr<'source> {
         Expr::Grouping(Box::new(expr))
     }
 
+    pub fn lambda(paramaters: Vec<Token<'source>>, bod: Vec<Stmt<'source>>) -> Self {
+        Self::Lambda {
+            params: paramaters, 
+            body: bod,
+        }
+    }
+
 } 
 
 // Our pretty printer
@@ -157,6 +171,10 @@ impl fmt::Display for Expr<'_> {
             }
             Expr::Literal(lit) => write!(f, "{:#?}", lit),
             Expr::Grouping(expr) => write!(f, "(group {})", expr),
+            Expr::Lambda { params, body } => {
+                let param_names: Vec<&str> = params.iter().map(|p| p.lexeme).collect();
+                write!(f, "(lambda [{}] {:?})", param_names.join(", "), body)
+            }
         }
     }
 }

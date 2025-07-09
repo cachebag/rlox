@@ -7,11 +7,10 @@
 //         - We use Rust's Result type for error handling, which is more idiomatic than Java's
 //         try-catch.
 
-use crate::{ast::stmt::FunctionDecl, token::{
-    Literal, 
-    Token, 
-    TokenType
-}};
+use crate::{
+    ast::stmt::FunctionDecl,
+    token::{Literal, Token, TokenType},
+};
 use crate::{
     ast::{expr::Expr, stmt::Stmt},
     environment::env::{Environment, SharedEnv},
@@ -22,7 +21,7 @@ use crate::{
     error::RuntimeError,
 };
 use core::fmt;
-use std::rc::Rc;
+use std::{rc::Rc};
 
 pub struct Interpreter<'source> {
     pub globals: SharedEnv<'source>,
@@ -73,15 +72,22 @@ impl<'source> Interpreter<'source> {
         }
     }
 
-    pub fn interpret(&mut self, statements: Vec<Stmt<'source>>) -> Result<(), RuntimeError<'source>> {
+    pub fn interpret(
+        &mut self,
+        statements: Vec<Stmt<'source>>,
+    ) -> Result<(), RuntimeError<'source>> {
         for statement in statements {
             self.execute(statement)?
         }
         Ok(())
     }
 
-    pub fn evaluate(&mut self, expr: Expr<'source>) -> Result<Value<'source>, RuntimeError<'source>> {
+    pub fn evaluate(
+        &mut self,
+        expr: Expr<'source>,
+    ) -> Result<Value<'source>, RuntimeError<'source>> {
         match expr {
+            Expr::Lambda { params, body } => self.evaluate_lambda(params.clone(), body),
             Expr::Literal(lit) => self.evaluate_literal(lit),
             Expr::Unary { operator, right } => self.evaluate_unary(operator, right.as_ref()),
             Expr::Mutate {
@@ -115,18 +121,19 @@ impl<'source> Interpreter<'source> {
         }
     }
 
-    fn evaluate_function(&mut self, decl: FunctionDecl<'source>) -> Result<(), RuntimeError<'source>> {
+    fn evaluate_function(
+        &mut self,
+        decl: FunctionDecl<'source>,
+    ) -> Result<(), RuntimeError<'source>> {
         let function = Function {
             declaration: decl.clone(),
             closure: self.environment.clone(),
         };
-        self.environment
-            .borrow_mut()
-            .define(
-                decl.name.lexeme.to_string(),
-                Value::Callable(Rc::new(function)),
-            );
-            Ok(())
+        self.environment.borrow_mut().define(
+            decl.name.as_ref().map(|t| t.lexeme).unwrap_or("<anonymous>").to_string(),
+            Value::Callable(Rc::new(function)),
+        );
+        Ok(())
     }
 
     pub fn execute(&mut self, stmt: Stmt<'source>) -> Result<(), RuntimeError<'source>> {
@@ -192,6 +199,22 @@ impl<'source> Interpreter<'source> {
 
         self.environment = previous;
         result
+    }
+
+    fn evaluate_lambda(
+        &mut self,
+        paramaters: Vec<Token<'source>>,
+        body_block: Vec<Stmt<'source>>,
+    ) -> Result<Value<'source>, RuntimeError<'source>> {
+        let function = Function {
+            declaration: FunctionDecl {
+                name: None,
+                params: paramaters,
+                body: body_block,
+            },
+            closure: self.environment.clone(),
+        };
+        Ok(Value::Callable(Rc::new(function)))
     }
 
     fn evaluate_block_statement(
@@ -471,7 +494,6 @@ impl<'source> Interpreter<'source> {
         }
 
         function.call(self, arguments)
-
     }
 
     fn evaluate_ternary(
