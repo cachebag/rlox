@@ -13,11 +13,11 @@ use crate::{
         stmt::{FunctionDecl, Stmt}
     }, 
     error::ParserError, 
-    token::{token::{
+    token::{
         Literal, 
         Token, 
         TokenType
-    }}
+    }
 };
 
 pub struct Parser<'source> {

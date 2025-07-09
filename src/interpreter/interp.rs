@@ -7,12 +7,15 @@
 //         - We use Rust's Result type for error handling, which is more idiomatic than Java's
 //         try-catch.
 
-use crate::{ast::stmt::FunctionDecl, token::token::{Token, TokenType}};
+use crate::{ast::stmt::FunctionDecl, token::{
+    Literal, 
+    Token, 
+    TokenType
+}};
 use crate::{
     ast::{expr::Expr, stmt::Stmt},
     environment::env::{Environment, SharedEnv},
     function::Function,
-    token::token::Literal,
 };
 use crate::{
     callable::{Callable, Clock},

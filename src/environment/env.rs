@@ -15,7 +15,7 @@ use std::{
     cell::RefCell,
 };
 use crate::{error::{RuntimeError}, interpreter::Value};
-use crate::token::token::Token;
+use crate::token::Token;
 
 pub type SharedEnv<'source> = Rc<RefCell<Environment<'source>>>;
 

@@ -8,7 +8,7 @@
 //             recursion in types. This is still simpler than Java's visitor pattern because 
 //             we can use the Display trait to traverse and print expressions directly.
 
-use crate::token::token::{Token, Literal};
+use crate::token::{Token, Literal};
 use std::fmt;
 
 #[derive(Debug, Clone)]
