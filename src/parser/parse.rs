@@ -14,7 +14,7 @@ use crate::{
         expr, 
         stmt::{FunctionDecl, Stmt}
     }, 
-    error::error::ParserError, 
+    error::ParserError, 
     token::{token::{
         Literal, 
         Token, 
@@ -186,6 +186,22 @@ impl <'source> Parser<'source> {
         })
     }
 
+    fn return_statement(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
+        let kw = self.previous().clone();
+        let mut val = None;
+
+        if !self.check(&[TokenType::Semicolon]) {
+            val = Some(self.expr()?);
+        }
+
+        self.consume(TokenType::Semicolon, "Expect ';' after return statement.")?;
+
+        Ok(Stmt::Return { 
+            keyword: kw, 
+            value: val 
+        })
+    } 
+
     fn while_statement(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
         self.loop_depth += 1;
         self.consume(TokenType::LeftParen, "Expected '(' after 'while'.")?;
@@ -337,7 +353,7 @@ impl <'source> Parser<'source> {
         if let Some(token) = self.peek().cloned() {
             if token.kind == TokenType::Question {
                 self.advance();
-                let true_expr = self.expr()?;
+                let true_expr = self.assignment()?;
 
                 if let Some(colon_token) = self.peek() {
                     if colon_token.kind == TokenType::Colon {

@@ -1,1 +1,2 @@
-pub mod scanner;
+pub mod scan;
+pub use scan::*;

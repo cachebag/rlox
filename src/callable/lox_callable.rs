@@ -9,10 +9,10 @@ use std::fmt::Debug;
 use std::fmt;
 use crate::interpreter::Value;
 use crate::interpreter::Interpreter;
-use crate::error::error::RuntimeError;
+use crate::error::RuntimeError;
 
 pub trait Callable<'source>: Debug {
-    fn call(&self, interpreter: &mut Interpreter<'source>, args: Vec<Value<'source>>) -> Result<Value<'source>, RuntimeError>;
+    fn call(&self, interpreter: &mut Interpreter<'source>, args: Vec<Value<'source>>) -> Result<Value<'source>, RuntimeError<'source>>;
     fn arity(&self) -> usize;
 }
 
@@ -20,7 +20,7 @@ pub trait Callable<'source>: Debug {
 pub struct Clock;
 
 impl<'source> Callable<'source> for Clock {
-    fn call(&self, _interpreter: &mut Interpreter<'source>, _args: Vec<Value<'source>>) -> Result<Value<'source>, RuntimeError> {
+    fn call(&self, _interpreter: &mut Interpreter<'source>, _args: Vec<Value<'source>>) -> Result<Value<'source>, RuntimeError<'source>> {
         let now = SystemTime::now();
         let duration_since_epoch = now
             .duration_since(UNIX_EPOCH)

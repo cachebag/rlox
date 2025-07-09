@@ -38,5 +38,5 @@ pub enum Stmt<'source> {
     },
     Break {
         keyword: Token<'source>,
-    }
+    },
 }
