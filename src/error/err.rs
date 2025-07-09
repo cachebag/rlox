@@ -114,7 +114,7 @@ impl fmt::Display for ParserError<'_> {
                 write!(f, "Cannot use break outside of a loop | Issue found on line {}.", line)
             }
             ParserError::TooManyParams { line } => {
-                write!(f, "Paramaters for a function cannot exceed 255. | line {}", line)
+                write!(f, "Parameters for a function cannot exceed 255. | line {}.", line)
             }
         }
     }
