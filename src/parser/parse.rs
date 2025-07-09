@@ -1,4 +1,4 @@
-// pars.rs 
+// parse.rs 
 // author: akrm al-hakimi
 // recursive descent parser for our rlox interpreter
 // Design notes:
@@ -565,7 +565,7 @@ impl <'source> Parser<'source> {
                 self.consume(TokenType::LeftBrace, "Expect '{' before lambda body")?;
                 let body_block = self.block()?;
                 Ok(expr::Expr::Lambda { 
-                    params: paramaters, 
+                    params: parameters, 
                     body: body_block  
                 })
             }

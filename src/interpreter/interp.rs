@@ -144,7 +144,8 @@ impl<'source> Interpreter<'source> {
                 Ok(())
             }
             Stmt::Expression(expr) => {
-                self.evaluate(expr)?;
+                let value = self.evaluate(expr)?;
+                println!("{}", value);
                 Ok(())
             }
             Stmt::Function(decl) => self.evaluate_function(decl),
