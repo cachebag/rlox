@@ -1,18 +1,21 @@
-// callable.rs 
+// callable.rs
 // author: akrm al-hakimi
 // This file defines the Callable trait, which is used for functions and classes in our interpreter.
-use std::time::{
-    UNIX_EPOCH,
-    SystemTime,
-};
-use std::fmt::Debug;
-use std::fmt;
-use crate::interpreter::Value;
-use crate::interpreter::Interpreter;
+
+
 use crate::error::RuntimeError;
+use crate::interpreter::Interpreter;
+use crate::interpreter::Value;
+use std::fmt;
+use std::fmt::Debug;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 pub trait Callable<'source>: Debug {
-    fn call(&self, interpreter: &mut Interpreter<'source>, args: Vec<Value<'source>>) -> Result<Value<'source>, RuntimeError<'source>>;
+    fn call(
+        &self,
+        interpreter: &mut Interpreter<'source>,
+        args: Vec<Value<'source>>,
+    ) -> Result<Value<'source>, RuntimeError<'source>>;
     fn arity(&self) -> usize;
 }
 
@@ -20,7 +23,11 @@ pub trait Callable<'source>: Debug {
 pub struct Clock;
 
 impl<'source> Callable<'source> for Clock {
-    fn call(&self, _interpreter: &mut Interpreter<'source>, _args: Vec<Value<'source>>) -> Result<Value<'source>, RuntimeError<'source>> {
+    fn call(
+        &self,
+        _interpreter: &mut Interpreter<'source>,
+        _args: Vec<Value<'source>>,
+    ) -> Result<Value<'source>, RuntimeError<'source>> {
         let now = SystemTime::now();
         let duration_since_epoch = now
             .duration_since(UNIX_EPOCH)
@@ -28,7 +35,7 @@ impl<'source> Callable<'source> for Clock {
         let seconds_since_epoch = Value::Number(duration_since_epoch.as_secs_f64());
         Ok(seconds_since_epoch)
     }
-    
+
     fn arity(&self) -> usize {
         0
     }

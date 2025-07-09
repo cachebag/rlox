@@ -1,13 +1,12 @@
-// scanner.rs 
+// scan.rs 
 // author: akrm al-hakimi
-// our scanner "class" to parse through and organize source code.
+// Our scanner "class" to parse through and organize source code.
 
 
 use std::{collections::HashMap, sync::RwLock};
 use once_cell::sync::Lazy;
 
-use crate::{error::ScannerError, token::token::{Literal, Token}};
-use crate::token::token::TokenType;
+use crate::{error::ScannerError, token::{TokenType, Literal, Token}};
 
 // Scanner struct to hold the state of the Scanner 
 // The impl block contains methods to scan the source code and produce tokens.

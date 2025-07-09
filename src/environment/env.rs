@@ -1,4 +1,4 @@
-// environment.rs
+// env.rs
 // author: Akrm Al-Hakimi
 // Environment module for managing variable scopes in the interpreter 
 // We do this a bit different than in Java, of course...
@@ -15,7 +15,7 @@ use std::{
     cell::RefCell,
 };
 use crate::{error::{RuntimeError}, interpreter::Value};
-use crate::token::token::Token;
+use crate::token::Token;
 
 pub type SharedEnv<'source> = Rc<RefCell<Environment<'source>>>;
 

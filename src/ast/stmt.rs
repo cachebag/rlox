@@ -1,5 +1,9 @@
+// stmt.rs 
+// author: akrm al-hakimi
+// This module defines the statement AST for the rlox interpreter
+
 use crate::ast::expr::Expr;
-use crate::token::token::Token;
+use crate::token::Token;
 
 #[derive(Debug, Clone)]
 pub struct FunctionDecl<'source> {

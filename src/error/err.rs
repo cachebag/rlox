@@ -1,10 +1,12 @@
-// error.rs 
+// err.rs 
 // author: akrm al-hakimi
 // error types for the scanner and any future components 
 
 use std::{fmt, io};
-use crate::token::token::TokenType;
-use crate::token::token::Token;
+use crate::token::{
+    TokenType,
+    Token,
+};
 use crate::interpreter::Value;
 
 // In the Java implementation, error handling was more rudimentary,

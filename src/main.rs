@@ -1,6 +1,6 @@
 // main.rs 
 // author: akrm al-hakimi
-// minimal REPL implementation for rlox interpreter
+// minimal REPL implementation and file runner for rlox interpreter
 
 use std::{
     env, 
@@ -70,11 +70,9 @@ fn run<'source>(source: &'source str, interpreter: &mut Interpreter<'source>) {
     let mut parser = Parser::new(tokens.clone());
     match parser.parse() {
         Ok(statements) if !statements.is_empty() => {
-            for stmt in statements {
-                if let Err(e) = interpreter.execute(stmt) {
-                    eprintln!("Runtime error: {}", e);
-                }
-            }
+           if let Err(e) = interpreter.interpret(statements) {
+                eprintln!("Runtime error: {}", e);
+            } 
         }
         Ok(_) | Err(_) => {
             // Fallback to expression evaluation only if the input doesn't include a semicolon

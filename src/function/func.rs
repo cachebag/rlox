@@ -1,3 +1,7 @@
+// func.rs 
+// author: akrm al-hakimi
+// This module defines the Function type, which represents a function in our interpreter.
+
 use crate::{ast::stmt::FunctionDecl, environment::{Environment, SharedEnv}, interpreter::{Interpreter, Value}};
 use std::fmt;
 use crate::callable::Callable;
