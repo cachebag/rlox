@@ -1,13 +1,11 @@
-// parser.rs 
+// pars.rs 
 // author: akrm al-hakimi
 // recursive descent parser for our rlox interpreter
 // Design notes:
-//              - We go without a few helpers that the book mentions such as `consume`, 'match' and `check`
-//               because we can use the `peek` and `advance` methods to handle most of the logic,
-//               and match statements to handle the different token types.
-//              - We use a single `expr` method to start parsing, which will call the other methods
-//              recursively.
-
+//         - The parser uses a recursive descent approach, which is simple and effective for our
+//         grammar.
+//         - Unlike Java, Rust's ownership model allows us to use references and lifetimes to manage 
+//         the lifetime of tokens and expressions without needing to pass around mutable references.
 
 use crate::{
     ast::{

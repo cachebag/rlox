@@ -1,4 +1,4 @@
-// environment.rs
+// env.rs
 // author: Akrm Al-Hakimi
 // Environment module for managing variable scopes in the interpreter 
 // We do this a bit different than in Java, of course...

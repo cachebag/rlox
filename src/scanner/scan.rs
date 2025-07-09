@@ -1,6 +1,6 @@
-// scanner.rs 
+// scan.rs 
 // author: akrm al-hakimi
-// our scanner "class" to parse through and organize source code.
+// Our scanner "class" to parse through and organize source code.
 
 
 use std::{collections::HashMap, sync::RwLock};

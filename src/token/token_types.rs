@@ -1,7 +1,6 @@
-// token.rs 
+// token_types.rs 
 // author: akrm al-hakimi
-// our token "class" for location information and for use in later phases of our interpreter
-// this file also includes our token_type enum
+// This module defines the token types for the rlox interpreter
 
 use std::fmt::{self, Formatter};
 

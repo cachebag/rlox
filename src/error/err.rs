@@ -1,4 +1,4 @@
-// error.rs 
+// err.rs 
 // author: akrm al-hakimi
 // error types for the scanner and any future components 
 

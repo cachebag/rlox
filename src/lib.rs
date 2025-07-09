@@ -1,3 +1,7 @@
+// lib.rs 
+// author: akrm al-hakimi
+// Main module for the rlox interpreter
+
 pub mod scanner;
 pub mod error;
 pub mod token;

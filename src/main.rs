@@ -1,6 +1,6 @@
 // main.rs 
 // author: akrm al-hakimi
-// minimal REPL implementation for rlox interpreter
+// minimal REPL implementation and file runner for rlox interpreter
 
 use std::{
     env, 
