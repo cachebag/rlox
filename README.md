@@ -18,7 +18,7 @@ cargo run
 > print "Hello, world!";
 Hello, World!
 
-> 10 != 100 ? print "true" : print "false";
+> var msg = 10 != 100 ? "true" : "false"; print msg;
 true
 ```
 3. Run a `lox` file

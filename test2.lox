@@ -1,0 +1,8 @@
+var x = 0;
+true ? (x = 1) : (x = 2);
+print x; // should print 1
+
+var y = 0;
+false ? (y = 1) : (y = 2);
+print y; // should print 2
+
