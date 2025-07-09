@@ -23,7 +23,7 @@ true
 ```
 3. Run a `lox` file
 ```JavaScript
-// test.lox
+// examples/recursive_fib.lox
 fn fib(n) {
   return n <= 1 ? n : fib(n - 2) + fib(n - 1);
 }
@@ -34,7 +34,7 @@ for (var i = 0; i < 20; i = i + 1) {
 ```
 
 ```bash
-cargo run test.lox
+cargo run examples/recursive_fib.lox
 
 0
 1
