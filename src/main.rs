@@ -11,8 +11,8 @@ use std::{
 
 use rlox::{
     interpreter::{Interpreter, Value},
-    parser::parser::Parser, 
-    scanner::scanner::Scanner,
+    parser::Parser, 
+    scanner::Scanner,
 };
 
 fn main() {

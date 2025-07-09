@@ -14,7 +14,7 @@ use std::{
     rc::Rc,
     cell::RefCell,
 };
-use crate::{error::error::{RuntimeError}, interpreter::Value};
+use crate::{error::{RuntimeError}, interpreter::Value};
 use crate::token::token::Token;
 
 pub type SharedEnv<'source> = Rc<RefCell<Environment<'source>>>;
@@ -44,7 +44,7 @@ impl <'source> Environment<'source> {
         self.values.insert(name, val);
     }
 
-    pub fn get(&self, name: &Token) -> Result<Value<'source>, RuntimeError> {
+    pub fn get(&self, name: &Token) -> Result<Value<'source>, RuntimeError<'source>> {
         if let Some(val) = self.values.get(name.lexeme) {
             Ok(val.clone())
         } else if let Some(enclosing) = &self.enclosing {
@@ -58,7 +58,7 @@ impl <'source> Environment<'source> {
  
 
 
-    pub fn assign(&mut self, name: Token, val: &Value<'source>) -> Result<Value<'source>, RuntimeError> {
+    pub fn assign(&mut self, name: Token, val: &Value<'source>) -> Result<Value<'source>, RuntimeError<'source>> {
         let key = name.lexeme.to_string();
         if self.values.contains_key(&key) {
             self.values.insert(key, val.clone());

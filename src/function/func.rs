@@ -10,7 +10,7 @@ pub struct Function<'source> {
 
 impl <'source> Callable <'source> for Function <'source> {
 
-    fn call(&self, interpreter: &mut Interpreter<'source>, args: Vec<Value<'source>>) -> Result<Value<'source>, RuntimeError> {
+    fn call(&self, interpreter: &mut Interpreter<'source>, args: Vec<Value<'source>>) -> Result<Value<'source>, RuntimeError<'source>> {
         let env = Environment::from_enclosing(self.closure.clone());
 
         for (param, arg) in self.declaration.params.iter().zip(args.into_iter()) {
@@ -18,8 +18,9 @@ impl <'source> Callable <'source> for Function <'source> {
         } 
 
         match interpreter.execute_block(&self.declaration.body, env) {
-            Ok(()) => Ok(Value::Nil),
+            Err(RuntimeError::ReturnException(val)) => Ok(val),
             Err(e) => Err(e),
+            Ok(()) => Ok(Value::Nil),
         }
     }
 

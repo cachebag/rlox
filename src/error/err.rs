@@ -5,6 +5,7 @@
 use std::{fmt, io};
 use crate::token::token::TokenType;
 use crate::token::token::Token;
+use crate::interpreter::Value;
 
 // In the Java implementation, error handling was more rudimentary,
 // but rust almost forces you to handle errors properly.
@@ -28,7 +29,7 @@ pub enum ParserError<'source> {
     BreakException{ line: usize },
 }
 
-pub enum RuntimeError {
+pub enum RuntimeError<'source> {
     Io(io::Error),
     UnaryMinus{ lexeme: String, line: usize },
     BinaryMinus{ lexeme: String, line: usize },
@@ -41,10 +42,10 @@ pub enum RuntimeError {
     BreakException,
     MutationError{ lexeme: String, line: usize },
     FunctionError{ lexeme: String, line: usize, message: String },
-    Return{ lexeme: usize },
+    ReturnException(Value<'source>),
 }
 
-impl fmt::Display for RuntimeError {
+impl fmt::Display for RuntimeError<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             RuntimeError::Io(e) => write!(f, "io error: {}", e),
@@ -81,9 +82,7 @@ impl fmt::Display for RuntimeError {
             RuntimeError::FunctionError { lexeme, line, message } => {
                 write!(f, "Here {} on line {} - {}", lexeme, line, message)
             }
-            RuntimeError::Return { lexeme } => {
-                write!(f, "{}", lexeme)
-            }
+            RuntimeError::ReturnException(val) => write!(f, "{}", val),  
         }
     }
 }

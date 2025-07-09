@@ -1,1 +1,2 @@
-pub mod function;
+pub mod func;
+pub use func::*;

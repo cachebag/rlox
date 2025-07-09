@@ -6,7 +6,7 @@
 use std::{collections::HashMap, sync::RwLock};
 use once_cell::sync::Lazy;
 
-use crate::{error::error::ScannerError, token::token::{Literal, Token}};
+use crate::{error::ScannerError, token::token::{Literal, Token}};
 use crate::token::token::TokenType;
 
 // Scanner struct to hold the state of the Scanner 

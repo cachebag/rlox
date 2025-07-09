@@ -1,5 +1,7 @@
-fn sayHi(first,last) {
-  print "Hi, " + first + " " + last + "!";
+fn fib(n) {
+  return n <= 1 ? n : fib(n - 2) + fib(n - 1);
 }
 
-sayHi("Dear", "Reader");
+for (var i = 0; i < 20; i = i + 1) {
+  print fib(i);
+}

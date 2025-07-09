@@ -6,12 +6,12 @@ use crate::{ast::stmt::FunctionDecl, token::token::{Token, TokenType}};
 use crate::{
     ast::{expr::Expr, stmt::Stmt},
     environment::env::{Environment, SharedEnv},
-    function::function::Function,
+    function::Function,
     token::token::Literal,
 };
 use crate::{
-    callable::callable::{Callable, Clock},
-    error::error::RuntimeError,
+    callable::{Callable, Clock},
+    error::RuntimeError,
 };
 use core::fmt;
 use std::rc::Rc;
@@ -65,14 +65,14 @@ impl<'source> Interpreter<'source> {
         }
     }
 
-    pub fn interpret(&mut self, statements: Vec<Stmt<'source>>) -> Result<(), RuntimeError> {
+    pub fn interpret(&mut self, statements: Vec<Stmt<'source>>) -> Result<(), RuntimeError<'source>> {
         for statement in statements {
             self.execute(statement)?
         }
         Ok(())
     }
 
-    pub fn evaluate(&mut self, expr: Expr<'source>) -> Result<Value<'source>, RuntimeError> {
+    pub fn evaluate(&mut self, expr: Expr<'source>) -> Result<Value<'source>, RuntimeError<'source>> {
         match expr {
             Expr::Literal(lit) => self.evaluate_literal(lit),
             Expr::Unary { operator, right } => self.evaluate_unary(operator, right.as_ref()),
@@ -107,7 +107,7 @@ impl<'source> Interpreter<'source> {
         }
     }
 
-    fn evaluate_function(&mut self, decl: FunctionDecl<'source>) -> Result<(), RuntimeError> {
+    fn evaluate_function(&mut self, decl: FunctionDecl<'source>) -> Result<(), RuntimeError<'source>> {
         let function = Function {
             declaration: decl.clone(),
             closure: self.environment.clone(),
@@ -121,7 +121,7 @@ impl<'source> Interpreter<'source> {
             Ok(())
     }
 
-    pub fn execute(&mut self, stmt: Stmt<'source>) -> Result<(), RuntimeError> {
+    pub fn execute(&mut self, stmt: Stmt<'source>) -> Result<(), RuntimeError<'source>> {
         match stmt {
             Stmt::Block(statements) => {
                 let new_env = Environment::from_enclosing(self.environment.clone());
@@ -146,6 +146,13 @@ impl<'source> Interpreter<'source> {
                 println!("{}", value);
                 Ok(())
             }
+            Stmt::Return { keyword: _, value } => {
+                let result = match value {
+                    Some(expr) => self.evaluate(expr)?,
+                    None => Value::Nil,
+                };
+                Err(RuntimeError::ReturnException(result))
+            }
             Stmt::While { condition, body } => {
                 self.evaluate_while(condition, *body)?;
                 Ok(())
@@ -167,7 +174,7 @@ impl<'source> Interpreter<'source> {
         &mut self,
         statements: &[Stmt<'source>],
         new_env: SharedEnv<'source>,
-    ) -> Result<(), RuntimeError> {
+    ) -> Result<(), RuntimeError<'source>> {
         let previous = self.environment.clone();
         self.environment = new_env;
 
@@ -183,7 +190,7 @@ impl<'source> Interpreter<'source> {
         &mut self,
         stmt: &[Stmt<'source>],
         new_env: SharedEnv<'source>,
-    ) -> Result<Value, RuntimeError> {
+    ) -> Result<Value, RuntimeError<'source>> {
         self.execute_block(stmt, new_env)?;
         Ok(Value::Nil)
     }
@@ -192,7 +199,7 @@ impl<'source> Interpreter<'source> {
         &mut self,
         name: Token,
         initializer: Option<Expr<'source>>,
-    ) -> Result<Value<'source>, RuntimeError> {
+    ) -> Result<Value<'source>, RuntimeError<'source>> {
         let value = match initializer {
             Some(expr) => self.evaluate(expr)?,
             None => Value::Nil,
@@ -208,7 +215,7 @@ impl<'source> Interpreter<'source> {
         &mut self,
         cond: Expr<'source>,
         body: Stmt<'source>,
-    ) -> Result<Value<'source>, RuntimeError> {
+    ) -> Result<Value<'source>, RuntimeError<'source>> {
         while {
             let cond_val = self.evaluate(cond.clone())?;
             self.is_truthy(&cond_val)
@@ -222,7 +229,7 @@ impl<'source> Interpreter<'source> {
         Ok(Value::Nil)
     }
 
-    fn evaluate_break(&mut self) -> Result<(), RuntimeError> {
+    fn evaluate_break(&mut self) -> Result<(), RuntimeError<'source>> {
         Err(RuntimeError::BreakException)
     }
 
@@ -231,7 +238,7 @@ impl<'source> Interpreter<'source> {
         cond: Expr<'source>,
         then_b: Stmt<'source>,
         else_b: Option<Stmt<'source>>,
-    ) -> Result<Value<'source>, RuntimeError> {
+    ) -> Result<Value<'source>, RuntimeError<'source>> {
         let condition_val = self.evaluate(cond)?;
 
         if self.is_truthy(&condition_val) {
@@ -250,14 +257,14 @@ impl<'source> Interpreter<'source> {
         &mut self,
         name: Token,
         value: Expr<'source>,
-    ) -> Result<Value<'source>, RuntimeError> {
+    ) -> Result<Value<'source>, RuntimeError<'source>> {
         let value = self.evaluate(value)?;
 
         self.environment.borrow_mut().assign(name, &value)?;
         Ok(value)
     }
 
-    fn evaluate_literal(&self, lit: Literal) -> Result<Value<'source>, RuntimeError> {
+    fn evaluate_literal(&self, lit: Literal) -> Result<Value<'source>, RuntimeError<'source>> {
         match lit {
             Literal::Num(n) => Ok(Value::Number(n)),
             Literal::Str(s) => Ok(Value::String(s.clone())),
@@ -272,7 +279,7 @@ impl<'source> Interpreter<'source> {
         lhs: Expr<'source>,
         operator: &Token,
         rhs: Expr<'source>,
-    ) -> Result<Value<'source>, RuntimeError> {
+    ) -> Result<Value<'source>, RuntimeError<'source>> {
         let left = self.evaluate(lhs)?;
         match operator.kind {
             TokenType::Or => {
@@ -296,7 +303,7 @@ impl<'source> Interpreter<'source> {
         &mut self,
         operator: Token,
         right: &Expr<'source>,
-    ) -> Result<Value<'source>, RuntimeError> {
+    ) -> Result<Value<'source>, RuntimeError<'source>> {
         let right_val = self.evaluate(right.clone())?;
 
         match operator.kind {
@@ -317,7 +324,7 @@ impl<'source> Interpreter<'source> {
         operator: Token,
         operand: Box<Expr<'source>>,
         postfix: bool,
-    ) -> Result<Value<'source>, RuntimeError> {
+    ) -> Result<Value<'source>, RuntimeError<'source>> {
         let name = match operand.as_ref() {
             Expr::Variable { name } => name,
             _ => {
@@ -368,7 +375,7 @@ impl<'source> Interpreter<'source> {
         left: Expr<'source>,
         operator: &Token,
         right: Expr<'source>,
-    ) -> Result<Value<'source>, RuntimeError> {
+    ) -> Result<Value<'source>, RuntimeError<'source>> {
         let left_val = self.evaluate(left.clone())?;
         let right_val = self.evaluate(right.clone())?;
         let lexeme = operator.lexeme.to_string();
@@ -428,7 +435,7 @@ impl<'source> Interpreter<'source> {
         callee: Expr<'source>,
         paren: Token<'source>,
         args: Vec<Expr<'source>>,
-    ) -> Result<Value<'source>, RuntimeError> {
+    ) -> Result<Value<'source>, RuntimeError<'source>> {
         let callee = self.evaluate(callee)?;
         let mut arguments: Vec<Value<'source>> = Vec::new();
 
@@ -464,7 +471,7 @@ impl<'source> Interpreter<'source> {
         condition: Expr<'source>,
         true_expr: Expr<'source>,
         false_expr: Expr<'source>,
-    ) -> Result<Value<'source>, RuntimeError> {
+    ) -> Result<Value<'source>, RuntimeError<'source>> {
         let condition_val = self.evaluate(condition)?;
 
         if self.is_truthy(&condition_val) {
