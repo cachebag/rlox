@@ -544,17 +544,17 @@ impl <'source> Parser<'source> {
                 self.advance();
                 self.consume(TokenType::LeftParen, "Expect '(' after 'fn'")?;
                 
-                let mut paramaters = Vec::new();
+                let mut parameters = Vec::new();
                 if !self.check(&[TokenType::RightParen]) {
                     loop {
-                        if paramaters.len() >= 255 {
+                        if parameters.len() >= 255 {
                             return Err(ParserError::TooManyParams {
                                 line: self.current_line() 
                             });
                         }
 
                         let param = self.consume(TokenType::Identifier, "Expect paramater name.")?;
-                        paramaters.push(param.clone());
+                        parameters.push(param.clone());
 
                         if !self.matches(&[TokenType::Comma]) {
                             break;
