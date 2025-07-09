@@ -24,17 +24,28 @@ true
 3. Run a `lox` file
 ```JavaScript
 // test.lox
-fn sayHi(first,last) {
-  print "Hi, " + first + " " + last + "!";
+fn fib(n) {
+  return n <= 1 ? n : fib(n - 2) + fib(n - 1);
 }
 
-sayHi("Dear", "Reader");
+for (var i = 0; i < 20; i = i + 1) {
+  print fib(i);
+}
 ```
 
 ```bash
 cargo run test.lox
 
-Hi, Dear Reader!
+0
+1
+1
+2
+3
+5
+8
+13
+21
+...
 ```
 # Resources
 - [_Crafting Interpreters_](https://craftinginterpreters.com/)
