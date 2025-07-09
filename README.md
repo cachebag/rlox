@@ -19,7 +19,7 @@ cargo run
 Hello, World!
 
 > 10 != 100 ? print "true" : print "false";
-false
+true
 ```
 3. Run a `lox` file
 ```JavaScript
