@@ -7,7 +7,7 @@ use crate::token::Token;
 
 #[derive(Debug, Clone)]
 pub struct FunctionDecl<'source> {
-    pub name: Token<'source>,
+    pub name: Option<Token<'source>>,
     pub params: Vec<Token<'source>>,
     pub body: Vec<Stmt<'source>>,
 }

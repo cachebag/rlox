@@ -36,12 +36,12 @@ impl <'source> Callable <'source> for Function <'source> {
 
 impl fmt::Debug for Function<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "<fn {}>", self.declaration.name.lexeme)
+        write!(f, "<fn {}>", self.declaration.name.as_ref().map(|t| t.lexeme).unwrap_or("<anonymous>"))
     }
 }
 
 impl fmt::Display for Function <'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "<fn {}>", self.declaration.name.lexeme)
+        write!(f, "<fn {}>", self.declaration.name.as_ref().map(|t| t.lexeme).unwrap_or("<anonymous>"))
     }
 }

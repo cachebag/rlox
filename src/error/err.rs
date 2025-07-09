@@ -29,6 +29,7 @@ pub enum ParserError<'source> {
     UnexpectedEof{ expected: String, line: usize },
     InvalidAssignmentTarget{ found: Token<'source>, line: usize },
     BreakException{ line: usize },
+    TooManyParams{ line: usize },
 }
 
 pub enum RuntimeError<'source> {
@@ -111,6 +112,9 @@ impl fmt::Display for ParserError<'_> {
             }
             ParserError::BreakException { line } => {
                 write!(f, "Cannot use break outside of a loop | Issue found on line {}.", line)
+            }
+            ParserError::TooManyParams { line } => {
+                write!(f, "Parameters for a function cannot exceed 255. | line {}.", line)
             }
         }
     }

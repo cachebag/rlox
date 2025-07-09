@@ -254,7 +254,7 @@ impl <'source> Parser<'source> {
         let body = self.block()?;
 
         let decl = FunctionDecl {
-            name, 
+            name: Some(name), 
             params: parameters,
             body,
         };
@@ -539,6 +539,35 @@ impl <'source> Parser<'source> {
                 } else {
                     Err(ParserError::UnterminatedParen { line: token.line })
                 }
+            }
+            TokenType::Fn => {
+                self.advance();
+                self.consume(TokenType::LeftParen, "Expect '(' after 'fn'")?;
+                
+                let mut parameters = Vec::new();
+                if !self.check(&[TokenType::RightParen]) {
+                    loop {
+                        if parameters.len() >= 255 {
+                            return Err(ParserError::TooManyParams {
+                                line: self.current_line() 
+                            });
+                        }
+
+                        let param = self.consume(TokenType::Identifier, "Expect paramater name.")?;
+                        parameters.push(param.clone());
+
+                        if !self.matches(&[TokenType::Comma]) {
+                            break;
+                        }
+                    }
+                }
+                self.consume(TokenType::RightParen, "Expect ')' after parameters.")?;
+                self.consume(TokenType::LeftBrace, "Expect '{' before lambda body")?;
+                let body_block = self.block()?;
+                Ok(expr::Expr::Lambda { 
+                    params: paramaters, 
+                    body: body_block  
+                })
             }
             _ => Err(ParserError::UnexpectedExpression { found: token.clone(), line: token.line }),
         }

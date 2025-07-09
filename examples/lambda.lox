@@ -1,0 +1,5 @@
+fn makeAdder(n) {
+    return fn(x) { return x + n; };
+}
+var add5 = makeAdder(5);
+print add5(3); // Should print 8
