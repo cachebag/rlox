@@ -5,10 +5,17 @@
 use std::{collections::HashMap};
 
 
-use crate::{ast::stmt::FunctionDecl, error::CompilerError, function, interpreter::Interpreter};
-use crate::ast::stmt::Stmt;
+use crate::{
+    ast::stmt::{
+        FunctionDecl,
+        Stmt,
+    },
+    error::CompilerError, 
+    interpreter::Interpreter
+};
 use crate::ast::expr::Expr;
 use crate::token::Token;
+use by_address::ByAddress;
 
 pub struct Resolver<'source> {
     interpreter: &'source mut Interpreter<'source>,
@@ -62,7 +69,19 @@ impl <'source> Resolver <'source> {
                 if let Some(else_branch_stmt) = else_branch {
                     self.resolve_stmt(else_branch_stmt);
                 }
-            }
+            },
+            Stmt::Print(expr) => {
+                self.resolve_expr(expr);
+            },
+            Stmt::Return { keyword: _, value } => {
+                if let Some(value) = value {
+                    self.resolve_expr(value);
+                }
+            },
+            Stmt::While { condition, body } => {
+                self.resolve_expr(condition);
+                self.resolve_stmt(&body);
+            },
             _ => {},
         }
     }
@@ -81,7 +100,28 @@ impl <'source> Resolver <'source> {
             Expr::Assign { name, value} => {
                 self.resolve_expr(value);
                 self.resolve_local(expr.clone(), name);
-            }
+            },
+            Expr::Binary { left, operator: _, right } => {
+                self.resolve_expr(&left);
+                self.resolve_expr(&right);
+            },
+            Expr::Call { callee, paren: _, args } => {
+                self.resolve_expr(&callee);
+                for argument in args {
+                    self.resolve_expr(argument);
+                }
+            },
+            Expr::Grouping(expr) => {
+                self.resolve_expr(expr);
+            },
+            Expr::Literal(_) => {},
+            Expr::Logical { left, operator: _, right } => {
+                self.resolve_expr(&left);
+                self.resolve_expr(&right);
+            },
+            Expr::Unary { operator: _, right } => {
+                self.resolve_expr(&right);
+            },
            _ => unimplemented!()
         }
     }
