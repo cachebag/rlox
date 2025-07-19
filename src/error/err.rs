@@ -48,6 +48,20 @@ pub enum RuntimeError<'source> {
     ReturnException(Value<'source>),
 }
 
+pub enum CompilerError<'source> {
+    LocalVarDecl{ name: Token<'source>},
+}
+
+impl fmt::Display for CompilerError<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CompilerError::LocalVarDecl { name } => {
+                write!(f, "Cannot read local variable in its own initializer. | Error: {}", name)
+            }
+        }
+    }
+}
+
 impl fmt::Display for RuntimeError<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

@@ -11,3 +11,4 @@ pub mod interpreter;
 pub mod environment;
 pub mod callable;
 pub mod function;
+pub mod resolver;
