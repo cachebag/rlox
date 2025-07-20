@@ -92,40 +92,40 @@ impl<'source> Interpreter<'source> {
 
     pub fn evaluate(
         &mut self,
-        expr: Expr<'source>,
+        expr: Rc<Expr<'source>>,
     ) -> Result<Value<'source>, RuntimeError<'source>> {
-        match expr {
-            Expr::Lambda { params, body } => self.evaluate_lambda(params.clone(), body),
-            Expr::Literal(lit) => self.evaluate_literal(lit),
-            Expr::Unary { operator, right } => self.evaluate_unary(operator, right.as_ref()),
+        match &*expr {
+            Expr::Lambda { params, body } => self.evaluate_lambda(params.clone(), body.clone()),
+            Expr::Literal(lit) => self.evaluate_literal(lit.clone()),
+            Expr::Unary { operator, right } => self.evaluate_unary(operator.clone(), &right.clone()),
             Expr::Mutate {
                 operator,
                 operand,
                 postfix,
-            } => self.evaluate_mutation(operator.clone(), operand, postfix),
+            } => self.evaluate_mutation(operator.clone(), operand.clone(), *postfix),
             Expr::Call {
                 callee,
                 paren,
                 args,
-            } => self.evaluate_call(*callee, paren, args),
-            Expr::Assign { name, value } => self.evaluate_assignment(name.clone(), *value),
+            } => self.evaluate_call(callee.clone(), paren.clone(), args.clone()),
+            Expr::Assign { name, value } => self.evaluate_assignment(name.clone(), value.clone()),
             Expr::Binary {
                 left,
                 operator,
                 right,
-            } => self.evaluate_binary(*left, &operator, *right),
-            Expr::Variable { name } => self.environment.borrow().get(&name),
-            Expr::Grouping(inner) => self.evaluate(*inner),
+            } => self.evaluate_binary(left.clone(), operator, right.clone()),
+            Expr::Variable { name } => self.environment.borrow().get(name),
+            Expr::Grouping(inner) => self.evaluate(inner.clone()),
             Expr::Ternary {
                 condition,
                 true_expr,
                 false_expr,
-            } => self.evaluate_ternary(*condition, *true_expr, *false_expr),
+            } => self.evaluate_ternary(condition.clone(), true_expr.clone(), false_expr.clone()),
             Expr::Logical {
                 left,
                 operator,
                 right,
-            } => self.evaluate_logical(*left, &operator, *right),
+            } => self.evaluate_logical(left.clone(), operator, right.clone()),
         }
     }
 
@@ -152,7 +152,7 @@ impl<'source> Interpreter<'source> {
                 Ok(())
             }
             Stmt::Expression(expr) => {
-                let value = self.evaluate(expr)?;
+                let value = self.evaluate(expr.clone())?;
                 println!("{}", value);
                 Ok(())
             }
@@ -162,11 +162,11 @@ impl<'source> Interpreter<'source> {
                 then_branch,
                 else_branch,
             } => {
-                self.evaluate_if_statement(condition, *then_branch, else_branch.map(|b| *b))?;
+                self.evaluate_if_statement(condition.clone(), *then_branch, else_branch.map(|b| *b))?;
                 Ok(())
             }
             Stmt::Print(expr) => {
-                let value = self.evaluate(expr)?;
+                let value = self.evaluate(expr.clone())?;
                 println!("{}", value);
                 Ok(())
             }
@@ -242,7 +242,7 @@ impl<'source> Interpreter<'source> {
     fn evaluate_var_decl(
         &mut self,
         name: Token,
-        initializer: Option<Expr<'source>>,
+        initializer: Option<Rc<Expr<'source>>>,
     ) -> Result<Value<'source>, RuntimeError<'source>> {
         let value = match initializer {
             Some(expr) => self.evaluate(expr)?,
@@ -257,7 +257,7 @@ impl<'source> Interpreter<'source> {
 
     fn evaluate_while(
         &mut self,
-        cond: Expr<'source>,
+        cond: Rc<Expr<'source>>,
         body: Stmt<'source>,
     ) -> Result<Value<'source>, RuntimeError<'source>> {
         while {
@@ -279,7 +279,7 @@ impl<'source> Interpreter<'source> {
 
     fn evaluate_if_statement(
         &mut self,
-        cond: Expr<'source>,
+        cond: Rc<Expr<'source>>,
         then_b: Stmt<'source>,
         else_b: Option<Stmt<'source>>,
     ) -> Result<Value<'source>, RuntimeError<'source>> {
@@ -300,7 +300,7 @@ impl<'source> Interpreter<'source> {
     fn evaluate_assignment(
         &mut self,
         name: Token,
-        value: Expr<'source>,
+        value: Rc<Expr<'source>>,
     ) -> Result<Value<'source>, RuntimeError<'source>> {
         let value = self.evaluate(value)?;
 
@@ -320,9 +320,9 @@ impl<'source> Interpreter<'source> {
 
     fn evaluate_logical(
         &mut self,
-        lhs: Expr<'source>,
+        lhs: Rc<Expr<'source>>,
         operator: &Token,
-        rhs: Expr<'source>,
+        rhs: Rc<Expr<'source>>,
     ) -> Result<Value<'source>, RuntimeError<'source>> {
         let left = self.evaluate(lhs)?;
         match operator.kind {
@@ -346,7 +346,7 @@ impl<'source> Interpreter<'source> {
     fn evaluate_unary(
         &mut self,
         operator: Token,
-        right: &Expr<'source>,
+        right: &Rc<Expr<'source>>,
     ) -> Result<Value<'source>, RuntimeError<'source>> {
         let right_val = self.evaluate(right.clone())?;
 
@@ -366,7 +366,7 @@ impl<'source> Interpreter<'source> {
     fn evaluate_mutation(
         &mut self,
         operator: Token,
-        operand: Box<Expr<'source>>,
+        operand: Rc<Expr<'source>>,
         postfix: bool,
     ) -> Result<Value<'source>, RuntimeError<'source>> {
         let name = match operand.as_ref() {
@@ -416,9 +416,9 @@ impl<'source> Interpreter<'source> {
 
     fn evaluate_binary(
         &mut self,
-        left: Expr<'source>,
+        left: Rc<Expr<'source>>,
         operator: &Token,
-        right: Expr<'source>,
+        right: Rc<Expr<'source>>,
     ) -> Result<Value<'source>, RuntimeError<'source>> {
         let left_val = self.evaluate(left.clone())?;
         let right_val = self.evaluate(right.clone())?;
@@ -476,9 +476,9 @@ impl<'source> Interpreter<'source> {
 
     fn evaluate_call(
         &mut self,
-        callee: Expr<'source>,
+        callee: Rc<Expr<'source>>,
         paren: Token<'source>,
-        args: Vec<Expr<'source>>,
+        args: Vec<Rc<Expr<'source>>>,
     ) -> Result<Value<'source>, RuntimeError<'source>> {
         let callee = self.evaluate(callee)?;
         let mut arguments: Vec<Value<'source>> = Vec::new();
@@ -511,9 +511,9 @@ impl<'source> Interpreter<'source> {
 
     fn evaluate_ternary(
         &mut self,
-        condition: Expr<'source>,
-        true_expr: Expr<'source>,
-        false_expr: Expr<'source>,
+        condition: Rc<Expr<'source>>,
+        true_expr: Rc<Expr<'source>>,
+        false_expr: Rc<Expr<'source>>,
     ) -> Result<Value<'source>, RuntimeError<'source>> {
         let condition_val = self.evaluate(condition)?;
 

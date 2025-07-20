@@ -79,7 +79,7 @@ fn run<'source>(source: &'source str, interpreter: &mut Interpreter<'source>) {
             if !source.contains(';') {
                 let mut expr_parser = Parser::new(tokens);
                 match expr_parser.expr() {
-                    Ok(expr) => match interpreter.evaluate(expr) {
+                    Ok(expr) => match interpreter.evaluate(expr.into()) {
                         Ok(value) => {
                             if !matches!(value, Value::Nil) {
                                 println!("{}", value);

@@ -4,6 +4,7 @@
 
 use crate::ast::expr::Expr;
 use crate::token::Token;
+use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 pub struct FunctionDecl<'source> {
@@ -16,28 +17,28 @@ pub struct FunctionDecl<'source> {
 pub enum Stmt<'source> {
     Class {
         name: Token<'source>,
-        superclass: Option<Expr<'source>>,
+        superclass: Option<Rc<Expr<'source>>>,
         methods: Vec<FunctionDecl<'source>>,
     },
     Block(Vec<Stmt<'source>>),
-    Expression(Expr<'source>),
+    Expression(Rc<Expr<'source>>),
     Function(FunctionDecl<'source>),
     If {
-        condition: Expr<'source>,
+        condition: Rc<Expr<'source>>,
         then_branch: Box<Stmt<'source>>,
         else_branch: Option<Box<Stmt<'source>>>,
     },
-    Print(Expr<'source>),
+    Print(Rc<Expr<'source>>),
     Return {
         keyword: Token<'source>,
-        value: Option<Expr<'source>>,
+        value: Option<Rc<Expr<'source>>>,
     },
     Var {
         name: Token<'source>,
-        initializer: Option<Expr<'source>>,
+        initializer: Option<Rc<Expr<'source>>>,
     },
     While {
-        condition: Expr<'source>,
+        condition: Rc<Expr<'source>>,
         body: Box<Stmt<'source>>,
     },
     Break {

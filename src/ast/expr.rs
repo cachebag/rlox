@@ -12,52 +12,52 @@ use crate::{
     token::{Token, Literal},
     ast::stmt::Stmt,
 };
-use std::{fmt};
+use std::{fmt, rc::Rc};
 
 #[derive(Debug, Clone)]
 pub enum Expr<'source> {
     Assign {
         name: Token<'source>,
-        value: Box<Expr<'source>>,
+        value: Rc<Expr<'source>>,
     },
     Binary {
-        left: Box<Expr<'source>>,
+        left: Rc<Expr<'source>>,
         operator: Token<'source>,
-        right: Box<Expr<'source>>,
+        right: Rc<Expr<'source>>,
     },
     Call {
-        callee: Box<Expr<'source>>,
+        callee: Rc<Expr<'source>>,
         paren: Token<'source>,
-        args: Vec<Expr<'source>>,
+        args: Vec<Rc<Expr<'source>>>,
     },
     Unary {
         operator: Token<'source>,
-        right: Box<Expr<'source>>,
+        right: Rc<Expr<'source>>,
     },
     Mutate {
         operator: Token<'source>,
-        operand: Box<Expr<'source>>,
+        operand: Rc<Expr<'source>>,
         postfix: bool,
     },
     Variable {
         name: Token<'source>,
     },
     Ternary {
-        condition: Box<Expr<'source>>,
-        true_expr: Box<Expr<'source>>,
-        false_expr: Box<Expr<'source>>,
+        condition: Rc<Expr<'source>>,
+        true_expr: Rc<Expr<'source>>,
+        false_expr: Rc<Expr<'source>>,
     },
     Logical {
-        left: Box<Expr<'source>>,
+        left: Rc<Expr<'source>>,
         operator: Token<'source>,
-        right: Box<Expr<'source>>,
+        right: Rc<Expr<'source>>,
     },
     Lambda {
         params: Vec<Token<'source>>,
         body: Vec<Stmt<'source>>, 
     },
     Literal(Literal),
-    Grouping(Box<Expr<'source>>),
+    Grouping(Rc<Expr<'source>>),
 }
 
 impl <'source> Expr<'source> {
@@ -65,21 +65,21 @@ impl <'source> Expr<'source> {
     pub fn assignment(val_name: Token<'source>, value: Expr<'source>) -> Self {
         Self::Assign {
             name: val_name,
-            value: Box::new(value),
+            value: Rc::new(value),
         }
     }
     
     pub fn binary(left: Expr<'source>, op: Token<'source>, right: Expr<'source>) -> Self {
         Self::Binary { 
-            left: Box::new(left),
+            left: Rc::new(left),
             operator: op,
-            right:Box::new(right),
+            right: Rc::new(right),
         }
     }
 
-    pub fn call(callee: Expr<'source>, parentheses: Token<'source>, arguments: Vec<Expr<'source>>) -> Self {
+    pub fn call(callee: Expr<'source>, parentheses: Token<'source>, arguments: Vec<Rc<Expr<'source>>>) -> Self {
         Self::Call {
-            callee: Box::new(callee),
+            callee: Rc::new(callee),
             paren: parentheses,
             args: arguments,
         }
@@ -88,14 +88,14 @@ impl <'source> Expr<'source> {
     pub fn unary(op: Token<'source>, right: Expr<'source>) -> Self {
         Self::Unary { 
             operator: op,
-            right: Box::new(right),
+            right: Rc::new(right),
         }
     }
 
     pub fn mutate(opt: Token<'source>, op: Expr<'source>, pfix: bool) -> Self {
         Self::Mutate {
             operator: opt,
-            operand: Box::new(op),
+            operand: Rc::new(op),
             postfix: pfix,
         }
     }
@@ -108,17 +108,17 @@ impl <'source> Expr<'source> {
 
     pub fn ternary(cond: Expr<'source>, true_expr: Expr<'source>, false_expr: Expr<'source>) -> Self {
         Self::Ternary {
-            condition: Box::new(cond),
-            true_expr: Box::new(true_expr),
-            false_expr: Box::new(false_expr),
+            condition: Rc::new(cond),
+            true_expr: Rc::new(true_expr),
+            false_expr: Rc::new(false_expr),
         }
     }
 
     pub fn logical(left: Expr<'source>, op: Token<'source>, right: Expr<'source>) -> Self {
         Self::Logical {
-            left: Box::new(left),
+            left: Rc::new(left),
             operator: op,
-            right: Box::new(right),
+            right: Rc::new(right),
         }
     }
 
@@ -127,7 +127,7 @@ impl <'source> Expr<'source> {
     }
 
     pub fn grouping(expr: Expr<'source>) -> Self {
-        Expr::Grouping(Box::new(expr))
+        Expr::Grouping(Rc::new(expr))
     }
 
     pub fn lambda(paramaters: Vec<Token<'source>>, bod: Vec<Stmt<'source>>) -> Self {
