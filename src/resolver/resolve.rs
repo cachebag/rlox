@@ -15,7 +15,7 @@ use crate::{
 };
 use crate::ast::expr::Expr;
 use crate::token::Token;
-use by_address::ByAddress;
+use std::rc::Rc;
 
 pub struct Resolver<'source> {
     interpreter: &'source mut Interpreter<'source>,
@@ -73,21 +73,19 @@ impl <'source> Resolver <'source> {
             Stmt::Print(expr) => {
                 self.resolve_expr(expr);
             },
-            Stmt::Return { keyword: _, value } => {
-                if let Some(value) = value {
-                    self.resolve_expr(value);
-                }
+            Stmt::Return { keyword: _, value: Some(value) } => {
+                self.resolve_expr(value);
             },
             Stmt::While { condition, body } => {
                 self.resolve_expr(condition);
-                self.resolve_stmt(&body);
+                self.resolve_stmt(body);
             },
             _ => {},
         }
     }
 
-    fn resolve_expr(&mut self, expr: &Expr<'source>) {
-        match expr {
+    fn resolve_expr(&mut self, expr: &Rc<Expr<'source>>) {
+        match &**expr {
             Expr::Variable { name } => {
                 if !self.scopes.is_empty() {
                     if let Some(scope) = self.scopes.last() {
@@ -102,11 +100,11 @@ impl <'source> Resolver <'source> {
                 self.resolve_local(expr.clone(), name);
             },
             Expr::Binary { left, operator: _, right } => {
-                self.resolve_expr(&left);
-                self.resolve_expr(&right);
+                self.resolve_expr(left);
+                self.resolve_expr(right);
             },
             Expr::Call { callee, paren: _, args } => {
-                self.resolve_expr(&callee);
+                self.resolve_expr(callee);
                 for argument in args {
                     self.resolve_expr(argument);
                 }
@@ -116,11 +114,11 @@ impl <'source> Resolver <'source> {
             },
             Expr::Literal(_) => {},
             Expr::Logical { left, operator: _, right } => {
-                self.resolve_expr(&left);
-                self.resolve_expr(&right);
+                self.resolve_expr(left);
+                self.resolve_expr(right);
             },
             Expr::Unary { operator: _, right } => {
-                self.resolve_expr(&right);
+                self.resolve_expr(right);
             },
            _ => unimplemented!()
         }
@@ -153,7 +151,7 @@ impl <'source> Resolver <'source> {
         }
     }
 
-    fn resolve_local(&mut self, expr: Expr<'source>, name: &Token) {
+    fn resolve_local(&mut self, expr: Rc<Expr<'source>>, name: &Token) {
         for (i, scope) in self.scopes.iter().enumerate().rev() {
             if scope.contains_key(name.lexeme) {
                 let depth = self.scopes.len() - 1 - i;

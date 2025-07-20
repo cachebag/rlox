@@ -19,6 +19,7 @@ use crate::{
         TokenType
     }
 };
+use std::rc::Rc;
 
 pub struct Parser<'source> {
     tokens: Vec<Token<'source>>,
@@ -125,13 +126,13 @@ impl <'source> Parser<'source> {
         if let Some(inc) = increment {
             body = Stmt::Block(vec![
                 body, 
-                Stmt::Expression(inc)
+                Stmt::Expression(Rc::new(inc))
             ]);
         }
 
         let cond = cond.unwrap_or(expr::Expr::Literal(Literal::True));
         body = Stmt::While {
-            condition: cond, 
+            condition: Rc::new(cond), 
             body: Box::new(body) 
         };
 
@@ -157,7 +158,7 @@ impl <'source> Parser<'source> {
         }
 
         Ok(Stmt::If {
-            condition: cond,
+            condition: Rc::new(cond),
             then_branch: Box::new(then_br), 
             else_branch: else_br, 
         })
@@ -166,15 +167,15 @@ impl <'source> Parser<'source> {
     fn print_statement(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
         let value = self.expr()?;
         self.consume(TokenType::Semicolon, "Expect ';' after value.")?;
-        Ok(Stmt::Print(value))
+        Ok(Stmt::Print(Rc::new(value)))
     }
 
     fn var_declaration(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
         let value = self.consume(TokenType::Identifier, "Expected variable name.")?;
 
-        let mut init: Option<expr::Expr<'source>> = None;
+        let mut init: Option<Rc<expr::Expr<'source>>> = None;
         if self.matches(&[TokenType::Equal]) {
-            init = Some(self.expr()?);
+            init = Some(self.expr()?.into());
         }
 
         self.consume(TokenType::Semicolon, "Expect ';' after value.")?;
@@ -186,17 +187,17 @@ impl <'source> Parser<'source> {
 
     fn return_statement(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
         let kw = self.previous().clone();
-        let mut val = None;
+        let mut val: Option<Rc<expr::Expr<'source>>> = None;
 
         if !self.check(&[TokenType::Semicolon]) {
-            val = Some(self.expr()?);
+            val = Some(self.expr()?.into());
         }
 
         self.consume(TokenType::Semicolon, "Expect ';' after return statement.")?;
 
         Ok(Stmt::Return { 
             keyword: kw, 
-            value: val 
+            value: val
         })
     } 
 
@@ -208,7 +209,7 @@ impl <'source> Parser<'source> {
         let cond_body = self.statement()?;
         self.loop_depth -= 1;
         Ok(Stmt::While { 
-            condition: cond, 
+            condition: Rc::new(cond), 
             body: Box::new(cond_body),
         })
 
@@ -226,7 +227,7 @@ impl <'source> Parser<'source> {
     fn expression_statement(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
         let expression = self.expr()?;
         self.consume(TokenType::Semicolon, "Expect ';' after value.")?;
-        Ok(Stmt::Expression(expression))
+        Ok(Stmt::Expression(Rc::new(expression)))
     }
 
     fn function(&mut self, kind: Token<'source>) -> Result<Stmt<'source>, ParserError<'source>> {
@@ -303,7 +304,7 @@ impl <'source> Parser<'source> {
 
                 // Check if the left-hand side is a variable
                 if let expr::Expr::Variable { name } = expr {
-                    return Ok(expr::Expr::Assign { name, value: Box::new(value) });
+                    return Ok(expr::Expr::Assign { name, value: Rc::new(value) });
                 } else { 
                     // If not, we have an invalid assignment target
                     let token = self.previous();
@@ -454,14 +455,14 @@ impl <'source> Parser<'source> {
     }
 
     fn finish_call(&mut self, callee: expr::Expr<'source>) -> Result<expr::Expr<'source>, ParserError<'source>> {
-        let mut arguments: Vec<expr::Expr<'source>> = Vec::new();
+        let mut arguments: Vec<Rc<expr::Expr<'source>>> = Vec::new();
 
         if !self.check(&[TokenType::RightParen]) {
             loop {
                 if arguments.len() >= 255 {
                     eprintln!("Can't have more than 255 arguments.");
                 }
-                arguments.push(self.assignment()?);
+                arguments.push(Rc::new(self.assignment()?));
 
                 if !self.matches(&[TokenType::Comma]) {
                     break;
@@ -471,7 +472,7 @@ impl <'source> Parser<'source> {
 
         let parentheses = self.consume(TokenType::RightParen, "Expect ')' after arguments.")?;
         Ok(expr::Expr::Call {
-            callee: Box::new(callee), 
+            callee: Rc::new(callee), 
             paren: parentheses, 
             args: arguments, 
         })
