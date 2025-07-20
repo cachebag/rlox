@@ -16,16 +16,35 @@ impl <'source> Callable <'source> for Function <'source> {
 
     fn call(&self, interpreter: &mut Interpreter<'source>, args: Vec<Value<'source>>) -> Result<Value<'source>, RuntimeError<'source>> {
         let env = Environment::from_enclosing(self.closure.clone());
-
+    
         for (param, arg) in self.declaration.params.iter().zip(args.into_iter()) {
             env.borrow_mut().define(param.lexeme.to_string(), arg);
-        } 
-
-        match interpreter.execute_block(&self.declaration.body, env) {
-            Err(RuntimeError::ReturnException(val)) => Ok(val),
-            Err(e) => Err(e),
-            Ok(()) => Ok(Value::Nil),
         }
+    
+        let previous = interpreter.environment.clone();
+        interpreter.environment = env.clone();
+    
+        let result = {
+            let mut body_result = Ok(Value::Nil);
+            for stmt in &self.declaration.body {
+                match interpreter.execute(stmt) {
+                    Err(RuntimeError::ReturnException(val)) => {
+                        body_result = Ok(val);
+                        break;
+                    }
+                    Err(e) => {
+                        body_result = Err(e);
+                        break;
+                    }
+                    Ok(()) => continue,
+                }
+            }
+            body_result
+        };
+    
+        interpreter.environment = previous;
+    
+        result
     }
 
     fn arity(&self) -> usize {

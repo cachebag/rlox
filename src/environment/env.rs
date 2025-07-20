@@ -10,11 +10,14 @@
 // This forms the backbone of scope management for block scopes, functions, and closures in the interpreter.
 
 use std::{
-    collections::HashMap,
-    rc::Rc,
-    cell::RefCell,
+    cell::RefCell, 
+    collections::HashMap, 
+    rc::Rc 
 };
-use crate::{error::{RuntimeError}, interpreter::Value};
+use crate::{
+    error::RuntimeError, 
+    interpreter::Value
+};
 use crate::token::Token;
 
 pub type SharedEnv<'source> = Rc<RefCell<Environment<'source>>>;
@@ -44,6 +47,48 @@ impl <'source> Environment<'source> {
         self.values.insert(name, val);
     }
 
+    pub fn ancestor(env: SharedEnv<'source>, distance: usize) -> Option<SharedEnv<'source>> {
+        let mut current = env;
+
+        for _ in 0..distance {
+            let next = {
+                let borrowed = current.borrow();
+                borrowed.enclosing.clone()
+            };
+
+            match next {
+                Some(env) => current = env,
+                None => return None,
+            }
+        }
+        Some(current)
+    }
+
+    pub fn get_at(env: SharedEnv<'source>, distance: usize, name: &Token<'source>) -> Result<Value<'source>, RuntimeError<'source>> {
+        if let Some(target) = Self::ancestor(env, distance) {
+            target.borrow().get(name)
+        } else {
+            Err(RuntimeError::UndefinedVariable {
+                found: name.lexeme.to_string(),
+            })
+        }
+    }
+
+    pub fn assign_at(
+        env: SharedEnv<'source>, 
+        distance: usize, 
+        name: Token<'source>, 
+        val: &Value<'source>
+    ) -> Result<Value<'source>, RuntimeError<'source>> {
+        if let Some(scope) = Self::ancestor(env, distance) {
+            scope.borrow_mut().assign(name, val)
+        } else {
+            Err(RuntimeError::UndefinedVariable { 
+                found: name.lexeme.to_string() 
+            })
+        }
+    } 
+
     pub fn get(&self, name: &Token) -> Result<Value<'source>, RuntimeError<'source>> {
         if let Some(val) = self.values.get(name.lexeme) {
             Ok(val.clone())
@@ -56,20 +101,26 @@ impl <'source> Environment<'source> {
         }  
     }
  
-
-
-    pub fn assign(&mut self, name: Token, val: &Value<'source>) -> Result<Value<'source>, RuntimeError<'source>> {
+    pub fn assign(
+        &mut self,
+        name: Token<'source>,
+        val: &Value<'source>,
+    ) -> Result<Value<'source>, RuntimeError<'source>> {
         let key = name.lexeme.to_string();
-        if self.values.contains_key(&key) {
-            self.values.insert(key, val.clone());
+    
+        if self.values.insert(key.clone(), val.clone()).is_some() {
             Ok(val.clone())
-        } else if let Some(enclosing) = &self.enclosing {
-            enclosing.borrow_mut().assign(name, val)
         } else {
-            Err(RuntimeError::UndefinedVariable {
-                found: name.lexeme.to_string(),
-            })
+            // Take a clone of the Rc, not a borrow of self
+            if let Some(enclosing) = self.enclosing.clone() {
+                enclosing.borrow_mut().assign(name, val)
+            } else {
+                Err(RuntimeError::UndefinedVariable {
+                    found: key,
+                })
+            }
         }
     }
+
 }
 

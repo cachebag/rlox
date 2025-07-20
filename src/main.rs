@@ -6,13 +6,14 @@ use std::{
     env, 
     fs, 
     io::{self, Write}, 
-    process
+    process,
 };
 
 use rlox::{
     interpreter::{Interpreter, Value},
     parser::Parser, 
     scanner::Scanner,
+    resolver::Resolver,
 };
 
 fn main() {
@@ -70,12 +71,22 @@ fn run<'source>(source: &'source str, interpreter: &mut Interpreter<'source>) {
     let mut parser = Parser::new(tokens.clone());
     match parser.parse() {
         Ok(statements) if !statements.is_empty() => {
-           if let Err(e) = interpreter.interpret(statements) {
+            let mut resolver = Resolver::new();
+            resolver.resolve_stmts(&statements, interpreter);
+
+            let errors = resolver.take_errors();
+            if !errors.is_empty() {
+                for e in errors {
+                    eprintln!("Resolver error: {}", e);
+                }
+                return;
+            }
+
+            if let Err(e) = interpreter.interpret(&statements) {
                 eprintln!("Runtime error: {}", e);
-            } 
+            }
         }
         Ok(_) | Err(_) => {
-            // Fallback to expression evaluation only if the input doesn't include a semicolon
             if !source.contains(';') {
                 let mut expr_parser = Parser::new(tokens);
                 match expr_parser.expr() {
