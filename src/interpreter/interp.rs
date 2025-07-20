@@ -22,10 +22,17 @@ use crate::{
 };
 use core::fmt;
 use std::{rc::Rc};
+use std::collections::HashMap;
+use by_address::ByAddress;
+
+type ExprRef<'source> = Rc<Expr<'source>>;
+type ExprKey<'source> = ByAddress<ExprRef<'source>>;
+
 
 pub struct Interpreter<'source> {
     pub globals: SharedEnv<'source>,
     pub environment: SharedEnv<'source>,
+    pub locals: HashMap<ExprKey<'source>, usize>,
 }
 
 #[derive(Debug, Clone)]
@@ -69,6 +76,7 @@ impl<'source> Interpreter<'source> {
         Interpreter {
             globals: globals.clone(),
             environment: globals,
+            locals: HashMap::new(),
         }
     }
 
@@ -184,6 +192,10 @@ impl<'source> Interpreter<'source> {
             }
             _ => unimplemented!(),
         }
+    }
+
+    pub fn resolve(&mut self, expr: Rc<Expr<'source>>, depth: usize) {
+        self.locals.insert(ByAddress(expr), depth);
     }
 
     pub fn execute_block(
