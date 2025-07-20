@@ -50,6 +50,8 @@ pub enum RuntimeError<'source> {
 
 pub enum CompilerError<'source> {
     LocalVarDecl{ name: Token<'source>},
+    ExistingVar{ line: usize },
+    IllegalReturn{ keyword: Token<'source>},
 }
 
 impl fmt::Display for CompilerError<'_> {
@@ -57,6 +59,12 @@ impl fmt::Display for CompilerError<'_> {
         match self {
             CompilerError::LocalVarDecl { name } => {
                 write!(f, "Cannot read local variable in its own initializer. | Error: {}", name)
+            }
+            CompilerError::ExistingVar { line } => {
+                write!(f, "Already a variable with this name in this scope. | Found on line {}", line)
+            }
+            CompilerError::IllegalReturn { keyword } => {
+                write!(f, "Error: {} - Can't return from top level code. (line {})", keyword.lexeme, keyword.line)
             }
         }
     }

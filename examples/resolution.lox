@@ -1,0 +1,65 @@
+// Simple Resolver Test - Variable Resolution Examples
+
+print "=== RESOLVER TEST ===";
+
+// 1. Basic variable resolution
+var a = "global a";
+var b = "global b";
+
+{
+  var a = "local a";
+  print a; // Should print "local a"
+  print b; // Should print "global b"
+}
+
+print a; // Should print "global a"
+
+// 2. Function closures
+fn makeFunction() {
+  var local = "captured";
+  
+  fn inner() {
+    print local; // Should resolve to makeFunction's local
+  }
+  
+  return inner;
+}
+
+var closure = makeFunction();
+closure();
+
+// 3. Nested function scopes
+fn outer() {
+  var x = "outer x";
+  
+  fn middle() {
+    var y = "middle y";
+    
+    fn inner() {
+      print x; // Should resolve to outer's x
+      print y; // Should resolve to middle's y
+    }
+    
+    inner();
+  }
+  
+  middle();
+}
+
+outer();
+
+// 4. Variable shadowing
+var name = "global";
+
+fn test() {
+  print name; // global
+  
+  {
+    var name = "local";
+    print name; // local
+  }
+  
+  print name; // global again
+}
+
+test();

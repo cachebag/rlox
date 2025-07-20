@@ -8,7 +8,7 @@
 //         try-catch.
 
 use crate::{
-    ast::stmt::FunctionDecl,
+    ast::{stmt::FunctionDecl},
     token::{Literal, Token, TokenType},
 };
 use crate::{
@@ -82,7 +82,7 @@ impl<'source> Interpreter<'source> {
 
     pub fn interpret(
         &mut self,
-        statements: Vec<Stmt<'source>>,
+        statements: &[Stmt<'source>],
     ) -> Result<(), RuntimeError<'source>> {
         for statement in statements {
             self.execute(statement)?
@@ -108,13 +108,20 @@ impl<'source> Interpreter<'source> {
                 paren,
                 args,
             } => self.evaluate_call(callee.clone(), paren.clone(), args.clone()),
-            Expr::Assign { name, value } => self.evaluate_assignment(name.clone(), value.clone()),
+            Expr::Assign { name, value } => self.evaluate_assignment(expr.clone(), name.clone(), value.clone()),
             Expr::Binary {
                 left,
                 operator,
                 right,
             } => self.evaluate_binary(left.clone(), operator, right.clone()),
-            Expr::Variable { name } => self.environment.borrow().get(name),
+            Expr::Variable { name } => {
+                let key = ByAddress(expr.clone());
+                if let Some(distance) = self.locals.get(&key) {
+                    Environment::get_at(self.environment.clone(), *distance, name)
+                } else {
+                    self.globals.borrow().get(name)
+                }
+            }
             Expr::Grouping(inner) => self.evaluate(inner.clone()),
             Expr::Ternary {
                 condition,
@@ -144,25 +151,24 @@ impl<'source> Interpreter<'source> {
         Ok(())
     }
 
-    pub fn execute(&mut self, stmt: Stmt<'source>) -> Result<(), RuntimeError<'source>> {
+    pub fn execute(&mut self, stmt: &Stmt<'source>) -> Result<(), RuntimeError<'source>> {
         match stmt {
             Stmt::Block(statements) => {
                 let new_env = Environment::from_enclosing(self.environment.clone());
-                self.execute_block(&statements, new_env)?;
+                self.execute_block(statements, new_env)?;
                 Ok(())
             }
             Stmt::Expression(expr) => {
-                let value = self.evaluate(expr.clone())?;
-                println!("{}", value);
+                let _value = self.evaluate(expr.clone())?;
                 Ok(())
             }
-            Stmt::Function(decl) => self.evaluate_function(decl),
+            Stmt::Function(decl) => self.evaluate_function(decl.clone()),
             Stmt::If {
                 condition,
                 then_branch,
                 else_branch,
             } => {
-                self.evaluate_if_statement(condition.clone(), *then_branch, else_branch.map(|b| *b))?;
+                self.evaluate_if_statement(condition.clone(), then_branch, else_branch.as_deref())?;
                 Ok(())
             }
             Stmt::Print(expr) => {
@@ -172,13 +178,13 @@ impl<'source> Interpreter<'source> {
             }
             Stmt::Return { keyword: _, value } => {
                 let result = match value {
-                    Some(expr) => self.evaluate(expr)?,
+                    Some(expr) => self.evaluate(expr.clone())?,
                     None => Value::Nil,
                 };
                 Err(RuntimeError::ReturnException(result))
             }
             Stmt::While { condition, body } => {
-                self.evaluate_while(condition, *body)?;
+                self.evaluate_while(condition.clone(), body)?;
                 Ok(())
             }
             Stmt::Break { keyword: _ } => {
@@ -187,7 +193,7 @@ impl<'source> Interpreter<'source> {
             }
             // In jlox, you can define unitialized variables but if you use them they'll just be nil
             Stmt::Var { name, initializer } => {
-                self.evaluate_var_decl(name, initializer)?;
+                self.evaluate_var_decl(name.clone(), initializer.clone())?;
                 Ok(())
             }
             _ => unimplemented!(),
@@ -208,7 +214,7 @@ impl<'source> Interpreter<'source> {
 
         let result = statements
             .iter()
-            .try_for_each(|stmt| self.execute(stmt.clone()));
+            .try_for_each(|stmt| self.execute(stmt));
 
         self.environment = previous;
         result
@@ -230,15 +236,6 @@ impl<'source> Interpreter<'source> {
         Ok(Value::Callable(Rc::new(function)))
     }
 
-    fn evaluate_block_statement(
-        &mut self,
-        stmt: &[Stmt<'source>],
-        new_env: SharedEnv<'source>,
-    ) -> Result<Value, RuntimeError<'source>> {
-        self.execute_block(stmt, new_env)?;
-        Ok(Value::Nil)
-    }
-
     fn evaluate_var_decl(
         &mut self,
         name: Token,
@@ -258,13 +255,13 @@ impl<'source> Interpreter<'source> {
     fn evaluate_while(
         &mut self,
         cond: Rc<Expr<'source>>,
-        body: Stmt<'source>,
+        body: &Stmt<'source>,
     ) -> Result<Value<'source>, RuntimeError<'source>> {
         while {
             let cond_val = self.evaluate(cond.clone())?;
             self.is_truthy(&cond_val)
         } {
-            match self.execute(body.clone()) {
+            match self.execute(body) {
                 Err(RuntimeError::BreakException) => break,
                 Err(e) => return Err(e),
                 _ => {}
@@ -280,31 +277,35 @@ impl<'source> Interpreter<'source> {
     fn evaluate_if_statement(
         &mut self,
         cond: Rc<Expr<'source>>,
-        then_b: Stmt<'source>,
-        else_b: Option<Stmt<'source>>,
+        then_b: &Stmt<'source>,
+        else_b: Option<&Stmt<'source>>,
     ) -> Result<Value<'source>, RuntimeError<'source>> {
         let condition_val = self.evaluate(cond)?;
 
         if self.is_truthy(&condition_val) {
-            self.evaluate_block_statement(
-                &[then_b],
-                Environment::from_enclosing(self.environment.clone()),
-            )?;
+            self.execute(then_b)?; // Remove the array wrapping
         } else if let Some(else_stmt) = else_b {
             self.execute(else_stmt)?;
         }
 
-        Ok(Value::Nil)
-    }
+            Ok(Value::Nil)
+        }
 
     fn evaluate_assignment(
         &mut self,
-        name: Token,
-        value: Rc<Expr<'source>>,
+        expr: Rc<Expr<'source>>,
+        name: Token<'source>,
+        value_expr: Rc<Expr<'source>>,
     ) -> Result<Value<'source>, RuntimeError<'source>> {
-        let value = self.evaluate(value)?;
+        let value = self.evaluate(value_expr)?;
+        let key = ByAddress(expr.clone());
 
-        self.environment.borrow_mut().assign(name, &value)?;
+        if let Some(distance) = self.locals.get(&key) {
+            Environment::assign_at(self.environment.clone(), *distance, name, &value)?;
+        } else {
+            self.globals.borrow_mut().assign(name, &value)?;
+        }
+
         Ok(value)
     }
 
@@ -433,6 +434,8 @@ impl<'source> Interpreter<'source> {
             TokenType::Plus => match (left_val, right_val) {
                 (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l + r)),
                 (Value::String(l), Value::String(r)) => Ok(Value::String(l + &r)),
+                (Value::String(l), Value::Number(r)) => Ok(Value::String(l + &r.to_string())),
+                (Value::Number(l), Value::String(r)) => Ok(Value::String(l.to_string() + &r)),
                 _ => Err(RuntimeError::BinaryPlus { lexeme, line }),
             },
             TokenType::Minus => match (left_val, right_val) {
