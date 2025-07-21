@@ -56,6 +56,8 @@ impl <'source> Parser<'source> {
     fn declaration(&mut self) -> Result<Option<Stmt<'source>>, ParserError<'source>> {
         let result = if self.matches(&[TokenType::Var]) {
             self.var_declaration()
+        } else if self.matches(&[TokenType::Class]) {
+            self.class()
         } else if self.matches(&[TokenType::Fn]) {
             let token = self.previous();
             self.function(token.clone())
@@ -70,6 +72,31 @@ impl <'source> Parser<'source> {
                 Ok(None)
             }
         }
+    }
+
+    fn class(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
+        let class_name = self.consume(TokenType::Identifier, "Expect class name.")?;
+        self.consume(TokenType::LeftBrace, "Expect '{' before class body.}")?;
+
+        let mut methods: Vec<FunctionDecl<'source>> = Vec::new();
+        while !self.check(&[TokenType::RightBrace]) && !self.is_at_end() {
+            let method_token = Token {
+                kind: TokenType::Identifier,
+                lexeme: "method",
+                literal: None,
+                line: self.current_line()
+            };
+            let method = self.function(method_token)?;
+            if let Stmt::Function(func_decl) = method {
+                methods.push(func_decl);
+            }
+        }
+
+        self.consume(TokenType::RightBrace, "Expect '}' after class body.")?;
+        Ok(Stmt::Class { 
+            name: class_name, 
+            methods, 
+        })
     }
 
     fn statement(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {

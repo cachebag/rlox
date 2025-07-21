@@ -8,17 +8,30 @@
 //         try-catch.
 
 use crate::{
-    ast::{stmt::FunctionDecl},
-    token::{Literal, Token, TokenType},
-};
-use crate::{
-    ast::{expr::Expr, stmt::Stmt},
-    environment::env::{Environment, SharedEnv},
+    ast::{
+        stmt::FunctionDecl,
+        expr::Expr,
+        stmt::Stmt,
+    },
+    token::{
+        Literal, 
+        Token, 
+        TokenType
+    },
+    class::{
+        LoxClass
+    },
+    environment::env::{
+        Environment,
+        SharedEnv,
+    },
     function::Function,
-};
-use crate::{
-    callable::{Callable, Clock},
+    callable::{
+        Callable,
+        Clock,
+    },
     error::RuntimeError,
+    instance::LoxInstance
 };
 use core::fmt;
 use std::{rc::Rc};
@@ -42,6 +55,8 @@ pub enum Value<'source> {
     Bool(bool),
     Nil,
     Callable(Rc<dyn Callable<'source> + 'source>),
+    Class(LoxClass),
+    Instance(LoxInstance),
 }
 
 impl PartialEq for Value<'_> {
@@ -54,6 +69,7 @@ impl PartialEq for Value<'_> {
             (Nil, Nil) => true,
             // Callable values are never equal
             (Callable(_), Callable(_)) => false,
+            (Class(_), Class(_)) => false,
             _ => false,
         }
     }
@@ -125,7 +141,7 @@ impl<'source> Interpreter<'source> {
             Expr::Grouping(inner) => self.evaluate(inner.clone()),
             Expr::Ternary {
                 condition,
-                true_expr,
+                true_expr, 
                 false_expr,
             } => self.evaluate_ternary(condition.clone(), true_expr.clone(), false_expr.clone()),
             Expr::Logical {
@@ -156,6 +172,10 @@ impl<'source> Interpreter<'source> {
             Stmt::Block(statements) => {
                 let new_env = Environment::from_enclosing(self.environment.clone());
                 self.execute_block(statements, new_env)?;
+                Ok(())
+            }
+            Stmt::Class { name: _, methods: _ } => {
+                let _value = self.evaluate_class(stmt.clone())?;
                 Ok(())
             }
             Stmt::Expression(expr) => {
@@ -196,7 +216,6 @@ impl<'source> Interpreter<'source> {
                 self.evaluate_var_decl(name.clone(), initializer.clone())?;
                 Ok(())
             }
-            _ => unimplemented!(),
         }
     }
 
@@ -218,6 +237,20 @@ impl<'source> Interpreter<'source> {
 
         self.environment = previous;
         result
+    }
+
+    pub fn evaluate_class(&mut self, class: Stmt<'source>) -> Result<Value<'source>, RuntimeError<'source>> {
+        if let Stmt::Class { name, methods : _} = class {
+            self.environment.borrow_mut().define(name.lexeme.to_string(), Value::Nil); 
+            let klass = LoxClass::new(name.lexeme.to_string());
+            self.environment.borrow_mut().assign(name, &Value::Class(klass))?;
+            Ok(Value::Nil)
+        } else {
+            Err(RuntimeError::TypeError {
+                msg: "Expected class statement".to_string(),
+                line: 0
+            })
+        }
     }
 
     fn evaluate_lambda(
@@ -490,26 +523,35 @@ impl<'source> Interpreter<'source> {
             arguments.push(self.evaluate(argument)?);
         }
 
-        let function = match callee {
-            Value::Callable(f) => f,
+        match callee {
+            Value::Callable(f) => {
+                if arguments.len() != f.arity() {
+                    return Err(RuntimeError::FunctionError {
+                        lexeme: paren.to_string(),
+                        line: paren.line,
+                        message: "Can only call functions and classes.".to_string(),
+                    });
+                }
+                f.call(self, arguments)
+            }
+            Value::Class(class) => {
+                if arguments.len() != class.arity() {
+                    return Err(RuntimeError::FunctionError {
+                        lexeme: paren.to_string(),
+                        line: paren.line,
+                        message: "Ensure your function call matches the function arity.".to_string(),
+                    });
+                }
+                class.call(self, arguments)
+            }
             _ => {
-                return Err(RuntimeError::FunctionError {
+                Err(RuntimeError::FunctionError {
                     lexeme: paren.to_string(),
                     line: paren.line,
                     message: "Can only call functions and classes.".to_string(),
-                });
+                })
             }
-        };
-
-        if arguments.len() != function.arity() {
-            return Err(RuntimeError::FunctionError {
-                lexeme: paren.to_string(),
-                line: paren.line,
-                message: "Ensure your function call matches the function arity.".to_string(),
-            });
         }
-
-        function.call(self, arguments)
     }
 
     fn evaluate_ternary(
@@ -544,6 +586,8 @@ impl fmt::Display for Value<'_> {
             Value::Bool(b) => write!(f, "{}", b),
             Value::Nil => write!(f, "nil"),
             Value::Callable(c) => write!(f, "{:?}", c),
+            Value::Class(class) => write!(f, "{}", class),
+            Value::Instance(instance) => write!(f, "{} instance", instance),
         }
     }
 }

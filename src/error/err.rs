@@ -46,6 +46,7 @@ pub enum RuntimeError<'source> {
     MutationError{ lexeme: String, line: usize },
     FunctionError{ lexeme: String, line: usize, message: String },
     ReturnException(Value<'source>),
+    TypeError{ msg: String, line: usize },
 }
 
 pub enum CompilerError<'source> {
@@ -107,7 +108,10 @@ impl fmt::Display for RuntimeError<'_> {
             RuntimeError::FunctionError { lexeme, line, message } => {
                 write!(f, "Here {} on line {} - {}", lexeme, line, message)
             }
-            RuntimeError::ReturnException(val) => write!(f, "{}", val),  
+            RuntimeError::ReturnException(val) => write!(f, "{}", val),
+            RuntimeError::TypeError { msg, line } => {
+                write!(f, "Error: {} on line {}", msg, line)
+            }
         }
     }
 }

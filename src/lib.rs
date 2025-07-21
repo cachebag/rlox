@@ -12,3 +12,5 @@ pub mod environment;
 pub mod callable;
 pub mod function;
 pub mod resolver;
+pub mod class;
+pub mod instance;

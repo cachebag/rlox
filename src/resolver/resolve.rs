@@ -17,6 +17,7 @@ use std::rc::Rc;
 enum FunctionType {
     None,
     Function,
+    Method,
 }
 
 pub struct Resolver<'source> {
@@ -71,6 +72,14 @@ impl<'source> Resolver<'source> {
                     self.define(name);
                 }
                 self.resolve_function(func, interpreter, FunctionType::Function);
+            }
+            Stmt::Class { name, methods} => {
+                self.declare(name);
+                self.define(name);
+
+                for method in methods {
+                    self.resolve_function(method, interpreter, FunctionType::Method);
+                }
             }
             Stmt::Expression(expr) => self.resolve_expr(expr, interpreter),
             Stmt::If {
