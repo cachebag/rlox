@@ -110,7 +110,7 @@ impl fmt::Display for RuntimeError<'_> {
             }
             RuntimeError::ReturnException(val) => write!(f, "{}", val),
             RuntimeError::TypeError { msg, line } => {
-                write!(f, "Error: {} on line {}", msg, line)
+                write!(f, "{} on line {}", msg, line)
             }
         }
     }

@@ -34,7 +34,7 @@ use crate::{
     instance::LoxInstance
 };
 use core::fmt;
-use std::{rc::Rc};
+use std::{rc::Rc, cell::RefCell};
 use std::collections::HashMap;
 use by_address::ByAddress;
 
@@ -56,7 +56,7 @@ pub enum Value<'source> {
     Nil,
     Callable(Rc<dyn Callable<'source> + 'source>),
     Class(LoxClass),
-    Instance(LoxInstance),
+    Instance(Rc<RefCell<LoxInstance<'source>>>),
 }
 
 impl PartialEq for Value<'_> {
@@ -137,6 +137,12 @@ impl<'source> Interpreter<'source> {
                 } else {
                     self.globals.borrow().get(name)
                 }
+            }
+            Expr::Get { object, name } => {
+                self.evaluate_get(object.clone(), name.clone())
+            }
+            Expr::Set { object, name, value } => {
+                self.evaluate_set(object, name.clone(), value)
             }
             Expr::Grouping(inner) => self.evaluate(inner.clone()),
             Expr::Ternary {
@@ -377,6 +383,28 @@ impl<'source> Interpreter<'source> {
             _ => unreachable!("Unknown logical operator."),
         }
     }
+
+    fn evaluate_set(
+        &mut self,
+        object: &Rc<Expr<'source>>,
+        name: Token<'source>,
+        value: &Rc<Expr<'source>>,
+    ) -> Result<Value<'source>, RuntimeError<'source>> {
+        let object = self.evaluate(object.clone())?;
+
+        match object {
+            Value::Instance(instance) => {
+                let val = self.evaluate(value.clone())?;
+                instance.borrow_mut().set(name, val.clone());
+                Ok(val)
+            }
+            _ => Err(RuntimeError::TypeError { 
+                msg: "Invalid set target.".to_string(), 
+                line: name.line 
+            })
+        }
+    }
+
     fn evaluate_unary(
         &mut self,
         operator: Token,
@@ -554,6 +582,20 @@ impl<'source> Interpreter<'source> {
         }
     }
 
+    fn evaluate_get(&mut self, object_expr: Rc<Expr<'source>>, name: Token<'source>) -> Result<Value<'source>, RuntimeError<'source>> {  
+        let object = self.evaluate(object_expr)?;
+        match object {
+            Value::Instance(instance) => {
+                let borrowed = instance.borrow();
+                borrowed.get(name)
+            }               
+            _ => Err(RuntimeError::TypeError { 
+                msg: "Only instances have properties.".to_string(), 
+                line: name.line 
+            })
+        }
+    }
+
     fn evaluate_ternary(
         &mut self,
         condition: Rc<Expr<'source>>,
@@ -587,7 +629,11 @@ impl fmt::Display for Value<'_> {
             Value::Nil => write!(f, "nil"),
             Value::Callable(c) => write!(f, "{:?}", c),
             Value::Class(class) => write!(f, "{}", class),
-            Value::Instance(instance) => write!(f, "{} instance", instance),
+            Value::Instance(instance) => {
+                    let borrowed = instance.borrow();
+                    write!(f, "{} instance", borrowed)
+            }
+
         }
     }
 }

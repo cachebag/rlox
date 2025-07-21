@@ -47,6 +47,11 @@ pub enum Expr<'source> {
         true_expr: Rc<Expr<'source>>,
         false_expr: Rc<Expr<'source>>,
     },
+    Set {
+        object: Rc<Expr<'source>>,
+        name: Token<'source>,
+        value: Rc<Expr<'source>>
+    },
     Logical {
         left: Rc<Expr<'source>>,
         operator: Token<'source>,
@@ -57,6 +62,10 @@ pub enum Expr<'source> {
         body: Vec<Stmt<'source>>, 
     },
     Literal(Literal),
+    Get {
+        object: Rc<Expr<'source>>,
+        name: Token<'source>,
+    },
     Grouping(Rc<Expr<'source>>),
 }
 
@@ -114,6 +123,14 @@ impl <'source> Expr<'source> {
         }
     }
 
+    pub fn set(object: Expr<'source>, name: Token<'source>, value: Expr<'source>) -> Self {
+        Self::Set { 
+            object: Rc::new(object), 
+            name, 
+            value: Rc::new(value), 
+        }
+    }
+
     pub fn logical(left: Expr<'source>, op: Token<'source>, right: Expr<'source>) -> Self {
         Self::Logical {
             left: Rc::new(left),
@@ -124,6 +141,13 @@ impl <'source> Expr<'source> {
 
     pub fn literal(val: Literal) -> Self {
         Expr::Literal(val)
+    }
+
+    pub fn get(object: Expr<'source>, name: Token<'source>) -> Self {
+        Self::Get {
+            object: Rc::new(object), 
+            name,
+        }
     }
 
     pub fn grouping(expr: Expr<'source>) -> Self {
@@ -166,10 +190,16 @@ impl fmt::Display for Expr<'_> {
             Expr::Ternary { condition, true_expr, false_expr } => {
                 write!(f, "({} ? {} : {})", condition, true_expr, false_expr)
             }
+            Expr::Set { object, name, value } => {
+                write!(f, "({}.{} = {})", object, name, value)
+            }
             Expr::Logical { left, operator, right } => {
                 write!(f, "({} {} {})", left, operator, right)
             }
             Expr::Literal(lit) => write!(f, "{:#?}", lit),
+            Expr::Get { object, name } => {
+                write!(f, "({}.{})", object, name)
+            }
             Expr::Grouping(expr) => write!(f, "(group {})", expr),
             Expr::Lambda { params, body } => {
                 let param_names: Vec<&str> = params.iter().map(|p| p.lexeme).collect();

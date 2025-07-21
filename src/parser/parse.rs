@@ -329,13 +329,27 @@ impl <'source> Parser<'source> {
                 // of the assignment 
                 let value = self.assignment()?;
 
-                // Check if the left-hand side is a variable
-                if let expr::Expr::Variable { name } = expr {
-                    return Ok(expr::Expr::Assign { name, value: Rc::new(value) });
-                } else { 
-                    // If not, we have an invalid assignment target
-                    let token = self.previous();
-                    return Err(ParserError::InvalidAssignmentTarget { found: token.clone(), line: token.line });
+                match expr {
+                    expr::Expr::Variable { name } => {
+                        return Ok(expr::Expr::Assign { 
+                            name, 
+                            value: Rc::new(value)
+                        });
+                    }
+                    expr::Expr::Get { object, name } => {
+                        return Ok(expr::Expr::Set { 
+                            object, 
+                            name, 
+                            value: Rc::new(value), 
+                        });
+                    }
+                    _ => {
+                        let token = self.previous();
+                        return Err(ParserError::InvalidAssignmentTarget { 
+                            found: token.clone(), 
+                            line: token.line, 
+                        });
+                    }
                 }
             }
         }
@@ -513,6 +527,13 @@ impl <'source> Parser<'source> {
                 Some(TokenType::LeftParen) => {
                     self.advance();
                     expr = self.finish_call(expr)?;
+                }
+                Some(TokenType::Dot) => {
+                    let name = self.consume(TokenType::Identifier, "Expect property name after '.'.")?;
+                    expr = expr::Expr::Get { 
+                        object: Rc::new(expr), 
+                        name, 
+                    }
                 }
                 Some(TokenType::Increment | TokenType::Decrement) => {
                     let operator = self.advance().clone();

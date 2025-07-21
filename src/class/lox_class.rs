@@ -3,6 +3,8 @@
 // our class
 
 use std::collections::HashMap;
+use std::rc::Rc;
+use std::cell::RefCell;
 
 use crate::{
     error::RuntimeError, 
@@ -28,9 +30,14 @@ impl LoxClass {
 }
 
 impl <'source> Callable<'source> for LoxClass {
-    fn call(&self, interpreter: &mut Interpreter<'source>, args: Vec<Value<'source>>) -> Result<Value<'source>, RuntimeError<'source>> {
+
+    fn call(
+        &self, 
+        interpreter: &mut Interpreter<'source>, 
+        args: Vec<Value<'source>>
+    ) -> Result<Value<'source>, RuntimeError<'source>> {
         let instance = LoxInstance::new(self.clone());
-        Ok(Value::Instance(instance))
+        Ok(Value::Instance(Rc::new(RefCell::new(instance))))
     }
 
     fn arity(&self) -> usize {

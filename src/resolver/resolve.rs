@@ -137,6 +137,11 @@ impl<'source> Resolver<'source> {
                 self.resolve_expr(left, interpreter);
                 self.resolve_expr(right, interpreter);
             }
+            Expr::Ternary { condition, true_expr, false_expr } => {
+                self.resolve_expr(condition, interpreter);
+                self.resolve_expr(true_expr, interpreter);
+                self.resolve_expr(false_expr, interpreter);
+            }
             Expr::Call {
                 callee,
                 paren: _,
@@ -146,6 +151,13 @@ impl<'source> Resolver<'source> {
                 for arg in args {
                     self.resolve_expr(arg, interpreter);
                 }
+            }
+            Expr::Set { object, name: _, value } => {
+                self.resolve_expr(value, interpreter);
+                self.resolve_expr(object, interpreter);   
+            }
+            Expr::Get { object, name : _} => {
+                self.resolve_expr(object, interpreter);
             }
             Expr::Grouping(expr) => self.resolve_expr(expr, interpreter),
             Expr::Logical {
