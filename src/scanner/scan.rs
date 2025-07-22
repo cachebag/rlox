@@ -203,30 +203,68 @@ impl <'source> Scanner<'source> {
     }
 
     fn string(&mut self) -> Result<(), ScannerError> {
+        let mut value = String::new(); // Build the actual string value
+    
         while let Some(ch) = self.peek() {
             match ch {
                 '"'  => break,                  // End of string  
-                '\n' => { self.line += 1; },    // Newline, increment line count
-                '\\' => {                       // Escape sequence  
+                '\n' => { 
+                    self.line += 1; 
+                    value.push('\n');           // Add actual newline to string
                     self.advance();
+                },    
+                '\\' => {                       // Escape sequence  
+                    self.advance(); // consume the '\'
                     if self.is_at_end() {
                         return Err(ScannerError::UnterminatedEscape(self.line));
                     }
-                    self.advance(); // Again because we already peeked
+                
+                    // Process the escape character
+                    match self.peek() {
+                        Some('n') => {
+                            value.push('\n');   // Actual newline
+                            self.advance();
+                        }
+                        Some('t') => {
+                            value.push('\t');   // Actual tab
+                            self.advance();
+                        }
+                        Some('r') => {
+                            value.push('\r');   // Carriage return
+                            self.advance();
+                        }
+                        Some('\\') => {
+                            value.push('\\');   // Literal backslash
+                            self.advance();
+                        }
+                        Some('"') => {
+                            value.push('"');    // Escaped quote
+                            self.advance();
+                        }
+                        Some(c) => {
+                            // Unknown escape, just include both chars
+                            value.push('\\');
+                            value.push(c);
+                            self.advance();
+                        }
+                        None => return Err(ScannerError::UnterminatedEscape(self.line)),
+                    }
                 }
-                _   => { self.advance(); } // Just consume the character
+                c => { 
+                    value.push(c);              // Regular character
+                    self.advance(); 
+                }
             };
         }
-        
+    
         // If we reach here, we either found a closing quote or reached the end of the source
         if self.is_at_end() {
             return Err(ScannerError::UnterminatedString(self.line));
         }
-        // We found the closing quote, so we consume  it
+        // We found the closing quote, so we consume it
         self.advance();
 
-        let lexeme = &self.source[self.start + 1 .. self.current - 1];
-        self.add_token_with_literal(TokenType::String, Some(Literal::Str(lexeme.to_owned())));
+        self.add_token_with_literal(TokenType::String, Some(Literal::Str(value)));
         Ok(())
     }
     fn is_at_end(&self) -> bool {

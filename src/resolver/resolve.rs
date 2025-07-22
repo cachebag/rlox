@@ -18,12 +18,20 @@ enum FunctionType {
     None,
     Function,
     Method,
+    Initializer,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum ClassType {
+    None,
+    Class,
 }
 
 pub struct Resolver<'source> {
     scopes: Vec<HashMap<String, bool>>,
     errors: Vec<CompilerError<'source>>,
     current_function: FunctionType,
+    current_class: ClassType,
 }
 
 #[allow(clippy::needless_lifetimes)]
@@ -39,6 +47,7 @@ impl<'source> Resolver<'source> {
             scopes: Vec::new(),
             errors: Vec::new(),
             current_function: FunctionType::None,
+            current_class: ClassType::None,
         }
     }
 
@@ -74,12 +83,25 @@ impl<'source> Resolver<'source> {
                 self.resolve_function(func, interpreter, FunctionType::Function);
             }
             Stmt::Class { name, methods} => {
+                let enclosing_class = self.current_class;
+                self.current_class = ClassType::Class;
+
                 self.declare(name);
                 self.define(name);
 
+                self.begin_scope();
+                self.scopes.last_mut().unwrap().insert("this".to_string(), true);
+
                 for method in methods {
-                    self.resolve_function(method, interpreter, FunctionType::Method);
+                    let declaration = if method.name.as_ref().map(|name| name.lexeme) == Some("init") {
+                        FunctionType::Initializer
+                    } else {
+                        FunctionType::Method
+                    };
+                    self.resolve_function(method, interpreter, declaration);
                 }
+                self.end_scope();
+                self.current_class = enclosing_class;
             }
             Stmt::Expression(expr) => self.resolve_expr(expr, interpreter),
             Stmt::If {
@@ -97,6 +119,11 @@ impl<'source> Resolver<'source> {
             Stmt::Return { keyword, value } => {
                 if self.current_function == FunctionType::None {
                     self.errors.push(CompilerError::IllegalReturn {
+                        keyword: keyword.clone(),
+                    });
+                }
+                if self.current_function == FunctionType::Initializer && value.is_some() {
+                    self.errors.push(CompilerError::InitializerReturn {
                         keyword: keyword.clone(),
                     });
                 }
@@ -158,6 +185,14 @@ impl<'source> Resolver<'source> {
             }
             Expr::Get { object, name : _} => {
                 self.resolve_expr(object, interpreter);
+            }
+            Expr::This { keyword } => {
+                if self.current_class == ClassType::None {
+                    self.errors.push(CompilerError::ThisOutsideClass {
+                        keyword: keyword.clone(),
+                    })
+                }
+                self.resolve_local(expr.clone(), keyword, interpreter);
             }
             Expr::Grouping(expr) => self.resolve_expr(expr, interpreter),
             Expr::Logical {

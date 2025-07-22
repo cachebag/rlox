@@ -1,0 +1,64 @@
+// Test file for Lox classes
+// This file tests all the core class features you've implemented
+
+// Define a simple class
+class Person {
+    init(name, age) {
+        this.name = name;
+        this.age = age;
+        print "Creating person: " + name;
+    }
+    
+    greet() {
+        print "Hello, I'm " + this.name + " and I'm " + this.age + " years old.";
+    }
+    
+    haveBirthday() {
+        this.age = this.age + 1;
+        print this.name + " is now " + this.age + " years old!";
+    }
+    
+    // Test method that returns this (should work with initializer logic)
+    setName(newName) {
+        this.name = newName;
+        return this;
+    }
+}
+
+// Test class instantiation
+print "=== Testing Class Instantiation ===";
+var alice = Person("Alice", 25);
+var bob = Person("Bob", 30);
+
+// Test method calls
+print "\n=== Testing Method Calls ===";
+alice.greet();
+bob.greet();
+
+// Test field access and modification
+print "\n=== Testing Field Access ===";
+print "Alice's name: " + alice.name;
+print "Bob's age: " + bob.age;
+
+// Test method that modifies fields
+print "\n=== Testing Field Modification ===";
+alice.haveBirthday();
+bob.haveBirthday();
+
+// Test setting fields directly
+print "\n=== Testing Direct Field Setting ===";
+alice.name = "Alice Smith";
+alice.greet();
+
+// Test method chaining (if your return this works)
+print "\n=== Testing Method Chaining ===";
+bob.setName("Robert").greet();
+
+// Test that each instance has its own fields
+print "\n=== Testing Instance Independence ===";
+var charlie = Person("Charlie", 22);
+charlie.age = 100;
+print "Charlie's age: " + charlie.age;
+print "Alice's age: " + alice.age + " (should be unchanged)";
+
+print "\n=== All class tests completed! ===";

@@ -9,32 +9,23 @@
 
 use crate::{
     ast::{
-        stmt::FunctionDecl,
-        expr::Expr,
-        stmt::Stmt,
-    },
-    token::{
+        expr::Expr, stmt::{FunctionDecl, Stmt}
+    }, callable::{
+        Callable,
+        Clock,
+    }, class::LoxClass, environment::{
+        env::{
+            Environment,
+            SharedEnv,
+        }
+    }, error::RuntimeError, function::Function, instance::LoxInstance, token::{
         Literal, 
         Token, 
         TokenType
-    },
-    class::{
-        LoxClass
-    },
-    environment::env::{
-        Environment,
-        SharedEnv,
-    },
-    function::Function,
-    callable::{
-        Callable,
-        Clock,
-    },
-    error::RuntimeError,
-    instance::LoxInstance
+    }
 };
 use core::fmt;
-use std::{rc::Rc, cell::RefCell};
+use std::{cell::RefCell, rc::Rc};
 use std::collections::HashMap;
 use by_address::ByAddress;
 
@@ -55,7 +46,7 @@ pub enum Value<'source> {
     Bool(bool),
     Nil,
     Callable(Rc<dyn Callable<'source> + 'source>),
-    Class(LoxClass),
+    Class(LoxClass<'source>),
     Instance(Rc<RefCell<LoxInstance<'source>>>),
 }
 
@@ -144,6 +135,14 @@ impl<'source> Interpreter<'source> {
             Expr::Set { object, name, value } => {
                 self.evaluate_set(object, name.clone(), value)
             }
+            Expr::This { keyword } => {
+                let key = ByAddress(expr.clone());
+                if let Some(distance) = self.locals.get(&key) {
+                    Environment::get_at(self.environment.clone(), *distance, keyword)
+                } else {
+                    self.globals.borrow().get(keyword)
+                }
+            }
             Expr::Grouping(inner) => self.evaluate(inner.clone()),
             Expr::Ternary {
                 condition,
@@ -165,6 +164,7 @@ impl<'source> Interpreter<'source> {
         let function = Function {
             declaration: decl.clone(),
             closure: self.environment.clone(),
+            is_initializer: false,
         };
         self.environment.borrow_mut().define(
             decl.name.as_ref().map(|t| t.lexeme).unwrap_or("<anonymous>").to_string(),
@@ -246,9 +246,20 @@ impl<'source> Interpreter<'source> {
     }
 
     pub fn evaluate_class(&mut self, class: Stmt<'source>) -> Result<Value<'source>, RuntimeError<'source>> {
-        if let Stmt::Class { name, methods : _} = class {
-            self.environment.borrow_mut().define(name.lexeme.to_string(), Value::Nil); 
-            let klass = LoxClass::new(name.lexeme.to_string());
+        if let Stmt::Class { name, methods } = class {
+            self.environment.borrow_mut().define(name.lexeme.to_string(), Value::Nil);
+            let mut method_map: HashMap<String, Function<'source>> = HashMap::new();
+            for method in methods {
+                let function = if method.name.as_ref().map(|name| name.lexeme) == Some("init") {
+                    Function::new_initializer(method.clone(), self.environment.clone())
+                } else {
+                    Function::new(method.clone(), self.environment.clone())
+                };
+                if let Some(method_name) = method.name {
+                    method_map.insert(method_name.lexeme.to_string(), function);
+                }
+            }
+            let klass = LoxClass::new(name.lexeme.to_string(), method_map);
             self.environment.borrow_mut().assign(name, &Value::Class(klass))?;
             Ok(Value::Nil)
         } else {
@@ -271,6 +282,7 @@ impl<'source> Interpreter<'source> {
                 body: body_block,
             },
             closure: self.environment.clone(),
+            is_initializer: false,
         };
         Ok(Value::Callable(Rc::new(function)))
     }
@@ -586,8 +598,8 @@ impl<'source> Interpreter<'source> {
         let object = self.evaluate(object_expr)?;
         match object {
             Value::Instance(instance) => {
-                let borrowed = instance.borrow();
-                borrowed.get(name)
+                // Don't drop the borrow too early
+                instance.borrow().get(instance.clone(), name)
             }               
             _ => Err(RuntimeError::TypeError { 
                 msg: "Only instances have properties.".to_string(), 

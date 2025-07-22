@@ -529,6 +529,7 @@ impl <'source> Parser<'source> {
                     expr = self.finish_call(expr)?;
                 }
                 Some(TokenType::Dot) => {
+                    self.advance();
                     let name = self.consume(TokenType::Identifier, "Expect property name after '.'.")?;
                     expr = expr::Expr::Get { 
                         object: Rc::new(expr), 
@@ -553,6 +554,10 @@ impl <'source> Parser<'source> {
         })?.clone();
 
         match token.kind {
+            TokenType::This => {
+                let keyword = self.advance().clone();
+                Ok(expr::Expr::This { keyword })
+            }
             TokenType::Identifier => {
                 let identifier = self.advance().clone();
                 Ok(expr::Expr::Variable {
