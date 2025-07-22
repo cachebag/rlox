@@ -46,12 +46,15 @@ pub enum RuntimeError<'source> {
     MutationError{ lexeme: String, line: usize },
     FunctionError{ lexeme: String, line: usize, message: String },
     ReturnException(Value<'source>),
+    TypeError{ msg: String, line: usize },
 }
 
 pub enum CompilerError<'source> {
     LocalVarDecl{ name: Token<'source>},
     ExistingVar{ line: usize },
     IllegalReturn{ keyword: Token<'source>},
+    ThisOutsideClass{ keyword: Token<'source>},
+    InitializerReturn{ keyword: Token<'source>},
 }
 
 impl fmt::Display for CompilerError<'_> {
@@ -65,6 +68,12 @@ impl fmt::Display for CompilerError<'_> {
             }
             CompilerError::IllegalReturn { keyword } => {
                 write!(f, "Error: {} - Can't return from top level code. (line {})", keyword.lexeme, keyword.line)
+            }
+            CompilerError::ThisOutsideClass { keyword } => {
+                write!(f, "Can't use 'this' outside of class. - {}", keyword)
+            }
+            CompilerError::InitializerReturn { keyword } => {
+                write!(f, "Can't return a value from an initializer. - {}", keyword)
             }
         }
     }
@@ -107,7 +116,10 @@ impl fmt::Display for RuntimeError<'_> {
             RuntimeError::FunctionError { lexeme, line, message } => {
                 write!(f, "Here {} on line {} - {}", lexeme, line, message)
             }
-            RuntimeError::ReturnException(val) => write!(f, "{}", val),  
+            RuntimeError::ReturnException(val) => write!(f, "{}", val),
+            RuntimeError::TypeError { msg, line } => {
+                write!(f, "{} on line {}", msg, line)
+            }
         }
     }
 }

@@ -74,6 +74,22 @@ impl <'source> Environment<'source> {
         }
     }
 
+    pub fn get_at_string(env: SharedEnv<'source>, distance: usize, name: &str) -> Result<Value<'source>, RuntimeError<'source>> {
+        if let Some(target) = Self::ancestor(env, distance) {
+            if let Some(value) = target.borrow().values.get(name) {
+                Ok(value.clone())
+            } else {
+                Err(RuntimeError::UndefinedVariable {
+                    found: name.to_string(),
+                })
+            }
+        } else {
+            Err(RuntimeError::UndefinedVariable {
+                found: name.to_string(),
+            })
+        }
+}
+
     pub fn assign_at(
         env: SharedEnv<'source>, 
         distance: usize, 

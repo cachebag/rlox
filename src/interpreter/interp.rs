@@ -8,20 +8,24 @@
 //         try-catch.
 
 use crate::{
-    ast::{stmt::FunctionDecl},
-    token::{Literal, Token, TokenType},
-};
-use crate::{
-    ast::{expr::Expr, stmt::Stmt},
-    environment::env::{Environment, SharedEnv},
-    function::Function,
-};
-use crate::{
-    callable::{Callable, Clock},
-    error::RuntimeError,
+    ast::{
+        expr::Expr, stmt::{FunctionDecl, Stmt}
+    }, callable::{
+        Callable,
+        Clock,
+    }, class::LoxClass, environment::{
+        env::{
+            Environment,
+            SharedEnv,
+        }
+    }, error::RuntimeError, function::Function, instance::LoxInstance, token::{
+        Literal, 
+        Token, 
+        TokenType
+    }
 };
 use core::fmt;
-use std::{rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 use std::collections::HashMap;
 use by_address::ByAddress;
 
@@ -42,6 +46,8 @@ pub enum Value<'source> {
     Bool(bool),
     Nil,
     Callable(Rc<dyn Callable<'source> + 'source>),
+    Class(LoxClass<'source>),
+    Instance(Rc<RefCell<LoxInstance<'source>>>),
 }
 
 impl PartialEq for Value<'_> {
@@ -54,6 +60,7 @@ impl PartialEq for Value<'_> {
             (Nil, Nil) => true,
             // Callable values are never equal
             (Callable(_), Callable(_)) => false,
+            (Class(_), Class(_)) => false,
             _ => false,
         }
     }
@@ -122,10 +129,24 @@ impl<'source> Interpreter<'source> {
                     self.globals.borrow().get(name)
                 }
             }
+            Expr::Get { object, name } => {
+                self.evaluate_get(object.clone(), name.clone())
+            }
+            Expr::Set { object, name, value } => {
+                self.evaluate_set(object, name.clone(), value)
+            }
+            Expr::This { keyword } => {
+                let key = ByAddress(expr.clone());
+                if let Some(distance) = self.locals.get(&key) {
+                    Environment::get_at(self.environment.clone(), *distance, keyword)
+                } else {
+                    self.globals.borrow().get(keyword)
+                }
+            }
             Expr::Grouping(inner) => self.evaluate(inner.clone()),
             Expr::Ternary {
                 condition,
-                true_expr,
+                true_expr, 
                 false_expr,
             } => self.evaluate_ternary(condition.clone(), true_expr.clone(), false_expr.clone()),
             Expr::Logical {
@@ -143,6 +164,7 @@ impl<'source> Interpreter<'source> {
         let function = Function {
             declaration: decl.clone(),
             closure: self.environment.clone(),
+            is_initializer: false,
         };
         self.environment.borrow_mut().define(
             decl.name.as_ref().map(|t| t.lexeme).unwrap_or("<anonymous>").to_string(),
@@ -156,6 +178,10 @@ impl<'source> Interpreter<'source> {
             Stmt::Block(statements) => {
                 let new_env = Environment::from_enclosing(self.environment.clone());
                 self.execute_block(statements, new_env)?;
+                Ok(())
+            }
+            Stmt::Class { name: _, methods: _ } => {
+                let _value = self.evaluate_class(stmt.clone())?;
                 Ok(())
             }
             Stmt::Expression(expr) => {
@@ -196,7 +222,6 @@ impl<'source> Interpreter<'source> {
                 self.evaluate_var_decl(name.clone(), initializer.clone())?;
                 Ok(())
             }
-            _ => unimplemented!(),
         }
     }
 
@@ -220,6 +245,31 @@ impl<'source> Interpreter<'source> {
         result
     }
 
+    pub fn evaluate_class(&mut self, class: Stmt<'source>) -> Result<Value<'source>, RuntimeError<'source>> {
+        if let Stmt::Class { name, methods } = class {
+            self.environment.borrow_mut().define(name.lexeme.to_string(), Value::Nil);
+            let mut method_map: HashMap<String, Function<'source>> = HashMap::new();
+            for method in methods {
+                let function = if method.name.as_ref().map(|name| name.lexeme) == Some("init") {
+                    Function::new_initializer(method.clone(), self.environment.clone())
+                } else {
+                    Function::new(method.clone(), self.environment.clone())
+                };
+                if let Some(method_name) = method.name {
+                    method_map.insert(method_name.lexeme.to_string(), function);
+                }
+            }
+            let klass = LoxClass::new(name.lexeme.to_string(), method_map);
+            self.environment.borrow_mut().assign(name, &Value::Class(klass))?;
+            Ok(Value::Nil)
+        } else {
+            Err(RuntimeError::TypeError {
+                msg: "Expected class statement".to_string(),
+                line: 0
+            })
+        }
+    }
+
     fn evaluate_lambda(
         &mut self,
         paramaters: Vec<Token<'source>>,
@@ -232,6 +282,7 @@ impl<'source> Interpreter<'source> {
                 body: body_block,
             },
             closure: self.environment.clone(),
+            is_initializer: false,
         };
         Ok(Value::Callable(Rc::new(function)))
     }
@@ -344,6 +395,28 @@ impl<'source> Interpreter<'source> {
             _ => unreachable!("Unknown logical operator."),
         }
     }
+
+    fn evaluate_set(
+        &mut self,
+        object: &Rc<Expr<'source>>,
+        name: Token<'source>,
+        value: &Rc<Expr<'source>>,
+    ) -> Result<Value<'source>, RuntimeError<'source>> {
+        let object = self.evaluate(object.clone())?;
+
+        match object {
+            Value::Instance(instance) => {
+                let val = self.evaluate(value.clone())?;
+                instance.borrow_mut().set(name, val.clone());
+                Ok(val)
+            }
+            _ => Err(RuntimeError::TypeError { 
+                msg: "Invalid set target.".to_string(), 
+                line: name.line 
+            })
+        }
+    }
+
     fn evaluate_unary(
         &mut self,
         operator: Token,
@@ -490,26 +563,49 @@ impl<'source> Interpreter<'source> {
             arguments.push(self.evaluate(argument)?);
         }
 
-        let function = match callee {
-            Value::Callable(f) => f,
+        match callee {
+            Value::Callable(f) => {
+                if arguments.len() != f.arity() {
+                    return Err(RuntimeError::FunctionError {
+                        lexeme: paren.to_string(),
+                        line: paren.line,
+                        message: "Can only call functions and classes.".to_string(),
+                    });
+                }
+                f.call(self, arguments)
+            }
+            Value::Class(class) => {
+                if arguments.len() != class.arity() {
+                    return Err(RuntimeError::FunctionError {
+                        lexeme: paren.to_string(),
+                        line: paren.line,
+                        message: "Ensure your function call matches the function arity.".to_string(),
+                    });
+                }
+                class.call(self, arguments)
+            }
             _ => {
-                return Err(RuntimeError::FunctionError {
+                Err(RuntimeError::FunctionError {
                     lexeme: paren.to_string(),
                     line: paren.line,
                     message: "Can only call functions and classes.".to_string(),
-                });
+                })
             }
-        };
-
-        if arguments.len() != function.arity() {
-            return Err(RuntimeError::FunctionError {
-                lexeme: paren.to_string(),
-                line: paren.line,
-                message: "Ensure your function call matches the function arity.".to_string(),
-            });
         }
+    }
 
-        function.call(self, arguments)
+    fn evaluate_get(&mut self, object_expr: Rc<Expr<'source>>, name: Token<'source>) -> Result<Value<'source>, RuntimeError<'source>> {  
+        let object = self.evaluate(object_expr)?;
+        match object {
+            Value::Instance(instance) => {
+                // Don't drop the borrow too early
+                instance.borrow().get(instance.clone(), name)
+            }               
+            _ => Err(RuntimeError::TypeError { 
+                msg: "Only instances have properties.".to_string(), 
+                line: name.line 
+            })
+        }
     }
 
     fn evaluate_ternary(
@@ -544,6 +640,12 @@ impl fmt::Display for Value<'_> {
             Value::Bool(b) => write!(f, "{}", b),
             Value::Nil => write!(f, "nil"),
             Value::Callable(c) => write!(f, "{:?}", c),
+            Value::Class(class) => write!(f, "{}", class),
+            Value::Instance(instance) => {
+                    let borrowed = instance.borrow();
+                    write!(f, "{} instance", borrowed)
+            }
+
         }
     }
 }
