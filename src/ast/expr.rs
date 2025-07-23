@@ -52,6 +52,10 @@ pub enum Expr<'source> {
         name: Token<'source>,
         value: Rc<Expr<'source>>,
     },
+    Super {
+        keyword: Token<'source>,
+        method: Token<'source>,
+    },
     This {
         keyword: Token<'source>,
     },
@@ -139,6 +143,13 @@ impl<'source> Expr<'source> {
         }
     }
 
+    pub fn _super(keyword: Token<'source>, method: Token<'source>) -> Self {
+        Self::Super { 
+            keyword,
+            method, 
+        }
+    }
+
     pub fn this(keyword: Token<'source>) -> Self {
         Self::This { keyword }
     }
@@ -223,6 +234,9 @@ impl fmt::Display for Expr<'_> {
                 value,
             } => {
                 write!(f, "({}.{} = {})", object, name, value)
+            }
+            Expr::Super { keyword, method } => {
+                write!(f, "({} {})", keyword, method)
             }
             Expr::This { keyword } => {
                 write!(f, "({})", keyword)

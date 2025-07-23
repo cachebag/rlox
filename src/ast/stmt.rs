@@ -18,6 +18,7 @@ pub enum Stmt<'source> {
     Block(Vec<Stmt<'source>>),    
     Class {    
         name: Token<'source>,
+        superclass: Option<Rc<Expr<'source>>>,
         methods: Vec<FunctionDecl<'source>>,
     },
     Expression(Rc<Expr<'source>>),

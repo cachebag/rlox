@@ -25,6 +25,7 @@ enum FunctionType {
 enum ClassType {
     None,
     Class,
+    SubClass,
 }
 
 pub struct Resolver<'source> {
@@ -82,25 +83,60 @@ impl<'source> Resolver<'source> {
                 }
                 self.resolve_function(func, interpreter, FunctionType::Function);
             }
-            Stmt::Class { name, methods} => {
+            Stmt::Class {
+                name,
+                superclass,
+                methods,
+            } => {
                 let enclosing_class = self.current_class;
                 self.current_class = ClassType::Class;
 
                 self.declare(name);
                 self.define(name);
 
+                if let Some(super_expr) = &superclass {
+                    if let Expr::Variable { name: super_name } = &**super_expr {
+                        if super_name.lexeme == name.lexeme {
+                            self.errors.push(CompilerError::SelfInheritance {
+                                line: super_name.line,
+                            });
+                        }
+                    }
+                }
+
+                if let Some(superclass_expr) = &superclass {
+                    self.current_class = ClassType::SubClass;
+                    self.resolve_expr(superclass_expr, interpreter);
+                }
+
+                if let Some(_superclass) = &superclass {
+                    self.begin_scope();
+                    if let Some(scope) = self.scopes.last_mut() {
+                        scope.insert("super".to_string(), true);
+                    };
+                }
+
                 self.begin_scope();
-                self.scopes.last_mut().unwrap().insert("this".to_string(), true);
+                self.scopes
+                    .last_mut()
+                    .unwrap()
+                    .insert("this".to_string(), true);
 
                 for method in methods {
-                    let declaration = if method.name.as_ref().map(|name| name.lexeme) == Some("init") {
-                        FunctionType::Initializer
-                    } else {
-                        FunctionType::Method
-                    };
+                    let declaration =
+                        if method.name.as_ref().map(|name| name.lexeme) == Some("init") {
+                            FunctionType::Initializer
+                        } else {
+                            FunctionType::Method
+                        };
                     self.resolve_function(method, interpreter, declaration);
                 }
                 self.end_scope();
+
+                if let Some(_superclass) = &superclass {
+                    self.end_scope();
+                }
+
                 self.current_class = enclosing_class;
             }
             Stmt::Expression(expr) => self.resolve_expr(expr, interpreter),
@@ -164,7 +200,11 @@ impl<'source> Resolver<'source> {
                 self.resolve_expr(left, interpreter);
                 self.resolve_expr(right, interpreter);
             }
-            Expr::Ternary { condition, true_expr, false_expr } => {
+            Expr::Ternary {
+                condition,
+                true_expr,
+                false_expr,
+            } => {
                 self.resolve_expr(condition, interpreter);
                 self.resolve_expr(true_expr, interpreter);
                 self.resolve_expr(false_expr, interpreter);
@@ -179,11 +219,29 @@ impl<'source> Resolver<'source> {
                     self.resolve_expr(arg, interpreter);
                 }
             }
-            Expr::Set { object, name: _, value } => {
+            Expr::Set {
+                object,
+                name: _,
+                value,
+            } => {
                 self.resolve_expr(value, interpreter);
-                self.resolve_expr(object, interpreter);   
+                self.resolve_expr(object, interpreter);
             }
-            Expr::Get { object, name : _} => {
+            Expr::Super { keyword, method: _ } => {
+                if self.current_class == ClassType::None {
+                    self.errors.push(CompilerError::SuperTypeError {
+                        msg: "Can't use 'super' outside of a class.".to_string(),
+                        line: keyword.line,
+                    })
+                } else if self.current_class != ClassType::SubClass {
+                    self.errors.push(CompilerError::SuperTypeError {
+                        msg: "Can't use 'super' in a class with no superclass.".to_string(),
+                        line: keyword.line,
+                    })
+                }
+                self.resolve_local(expr.clone(), keyword, interpreter);
+            }
+            Expr::Get { object, name: _ } => {
                 self.resolve_expr(object, interpreter);
             }
             Expr::This { keyword } => {
@@ -208,7 +266,6 @@ impl<'source> Resolver<'source> {
             _ => unimplemented!(),
         }
     }
-
 
     fn resolve_local(
         &mut self,

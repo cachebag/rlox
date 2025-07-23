@@ -13,12 +13,10 @@ use crate::{
     }, callable::{
         Callable,
         Clock,
-    }, class::LoxClass, environment::{
-        env::{
+    }, class::LoxClass, environment::env::{
             Environment,
             SharedEnv,
-        }
-    }, error::RuntimeError, function::Function, instance::LoxInstance, token::{
+        }, error::RuntimeError, function::Function, instance::{LoxInstance}, token::{
         Literal, 
         Token, 
         TokenType
@@ -46,7 +44,7 @@ pub enum Value<'source> {
     Bool(bool),
     Nil,
     Callable(Rc<dyn Callable<'source> + 'source>),
-    Class(LoxClass<'source>),
+    Class(Rc<LoxClass<'source>>),
     Instance(Rc<RefCell<LoxInstance<'source>>>),
 }
 
@@ -135,6 +133,9 @@ impl<'source> Interpreter<'source> {
             Expr::Set { object, name, value } => {
                 self.evaluate_set(object, name.clone(), value)
             }
+            Expr::Super { keyword, method } => {
+                self.evaluate_super(expr.clone(), keyword.clone(), method.clone())
+            }
             Expr::This { keyword } => {
                 let key = ByAddress(expr.clone());
                 if let Some(distance) = self.locals.get(&key) {
@@ -180,7 +181,7 @@ impl<'source> Interpreter<'source> {
                 self.execute_block(statements, new_env)?;
                 Ok(())
             }
-            Stmt::Class { name: _, methods: _ } => {
+            Stmt::Class { name: _, superclass: _, methods: _ } => {
                 let _value = self.evaluate_class(stmt.clone())?;
                 Ok(())
             }
@@ -246,8 +247,28 @@ impl<'source> Interpreter<'source> {
     }
 
     pub fn evaluate_class(&mut self, class: Stmt<'source>) -> Result<Value<'source>, RuntimeError<'source>> {
-        if let Stmt::Class { name, methods } = class {
+        if let Stmt::Class { name, superclass, methods } = class {
             self.environment.borrow_mut().define(name.lexeme.to_string(), Value::Nil);
+
+            let mut super_class_value: Option<Rc<LoxClass<'source>>> = None;
+            if let Some(super_expr) = &superclass {
+                let eval = self.evaluate(super_expr.clone())?;
+                match eval {
+                    Value::Class(class_obj) => {
+                        super_class_value = Some(class_obj.clone());
+
+                        let new_env: Rc<RefCell<Environment>> = Environment::from_enclosing(self.environment.clone());
+                        Environment::define(&mut new_env.borrow_mut(),"super".to_string(), Value::Class(class_obj.clone()));
+                        self.environment = new_env;
+                    }
+                    _ => {
+                        return Err(RuntimeError::TypeError { 
+                            msg: "Superclass must be a class.".to_string(), 
+                            line: name.line,
+                        })
+                    }
+                }
+            }
             let mut method_map: HashMap<String, Function<'source>> = HashMap::new();
             for method in methods {
                 let function = if method.name.as_ref().map(|name| name.lexeme) == Some("init") {
@@ -259,8 +280,18 @@ impl<'source> Interpreter<'source> {
                     method_map.insert(method_name.lexeme.to_string(), function);
                 }
             }
-            let klass = LoxClass::new(name.lexeme.to_string(), method_map);
-            self.environment.borrow_mut().assign(name, &Value::Class(klass))?;
+            let klass = LoxClass::new(name.lexeme.to_string(), method_map, super_class_value);
+            self.environment.borrow_mut().assign(name, &Value::Class(klass.into()))?;
+
+            if superclass.is_some() {
+                    let enclosing_env = {
+                        let env_ref = self.environment.borrow();
+                        env_ref.enclosing.clone()
+                    };
+                    if let Some(enclosing) = enclosing_env {
+                        self.environment = enclosing;
+                }
+            }
             Ok(Value::Nil)
         } else {
             Err(RuntimeError::TypeError {
@@ -413,6 +444,48 @@ impl<'source> Interpreter<'source> {
             _ => Err(RuntimeError::TypeError { 
                 msg: "Invalid set target.".to_string(), 
                 line: name.line 
+            })
+        }
+    }
+
+    fn evaluate_super(
+        &mut self,
+        expr: Rc<Expr<'source>>,
+        keyword: Token<'source>,
+        method: Token<'source>,
+    ) -> Result<Value<'source>, RuntimeError<'source>> {
+        let distance = if let Some(distance) = self.locals.get(&ByAddress(expr.clone())) {
+            *distance
+        } else {
+            return Err(RuntimeError::TypeError { 
+                msg: "Undefined variable 'super'.".into(), 
+                line: keyword.line
+            });
+        };
+
+        let superclass = match Environment::get_at_string(self.environment.clone(), distance, "super")? {
+            Value::Class(class_rc) => class_rc.clone(),
+            _ => return Err(RuntimeError::TypeError { 
+                msg: "super must be a class.".into(), 
+                line: keyword.line
+            }),
+        };
+
+        let object = match Environment::get_at_string(self.environment.clone(), distance - 1, "this")? {
+            Value::Instance(instance_rc) => instance_rc.clone(),
+            _ => return Err(RuntimeError::TypeError { 
+                msg: "'this' must be instance.".into(),
+                line: keyword.line 
+            })
+        };
+
+        // Now you need to find the method and return it
+        // This part depends on your class/method implementation
+        if let Some(method_fn) = superclass.find_method(method.lexeme) {
+            Ok(Value::Callable(Rc::new(method_fn.bind(object))))
+        } else {
+            Err(RuntimeError::UndefinedVariable { 
+                found: method.lexeme.to_string(),
             })
         }
     }

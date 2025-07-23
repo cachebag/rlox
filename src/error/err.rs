@@ -55,6 +55,8 @@ pub enum CompilerError<'source> {
     IllegalReturn{ keyword: Token<'source>},
     ThisOutsideClass{ keyword: Token<'source>},
     InitializerReturn{ keyword: Token<'source>},
+    SelfInheritance{ line: usize },
+    SuperTypeError{ msg: String, line: usize },
 }
 
 impl fmt::Display for CompilerError<'_> {
@@ -74,6 +76,12 @@ impl fmt::Display for CompilerError<'_> {
             }
             CompilerError::InitializerReturn { keyword } => {
                 write!(f, "Can't return a value from an initializer. - {}", keyword)
+            }
+            CompilerError::SelfInheritance { line } => {
+                write!(f, "A class can't inherit from itself. Error on line {}", line)
+            }
+            CompilerError::SuperTypeError { msg, line } => {
+                write!(f, "{} on line {}", msg, line)
             }
         }
     }
