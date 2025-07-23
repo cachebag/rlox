@@ -20,19 +20,28 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct LoxClass<'source> {
     pub name: String,
-    methods: HashMap<String, Function<'source>>
+    pub superclass: Option<Rc<LoxClass<'source>>>,
+    methods: HashMap<String, Function<'source>>,
 }
 
 impl <'source> LoxClass<'source>{
-    pub fn new(name: String, methods: HashMap<String, Function<'source>>) -> Self {
+    pub fn new(name: String, methods: HashMap<String, Function<'source>>, superclass: Option<Rc<LoxClass<'source>>>) -> Self {
         Self {
             name,
             methods,
+            superclass,
         }
     }
 
     pub fn find_method(&self, name: &str) -> Option<&Function<'source>> {
-        self.methods.get(name)
+        if let Some(method) = self.methods.get(name) {
+            return Some(method);
+        }
+
+        if let Some(ref superclass) = self.superclass {
+            return superclass.find_method(name);
+        }
+        None
     }
 }
 

@@ -82,12 +82,26 @@ impl<'source> Resolver<'source> {
                 }
                 self.resolve_function(func, interpreter, FunctionType::Function);
             }
-            Stmt::Class { name, methods} => {
+            Stmt::Class { name, superclass, methods} => {
                 let enclosing_class = self.current_class;
                 self.current_class = ClassType::Class;
 
                 self.declare(name);
                 self.define(name);
+
+                if let Some(super_expr) = &superclass {
+                    if let Expr::Variable { name: super_name } = &**super_expr {
+                        if super_name.lexeme == name.lexeme {
+                            self.errors.push(CompilerError::SelfInheritance {
+                                line: super_name.line,
+                            });
+                        }
+                    }
+                }
+
+                if let Some(superclass_expr) = &superclass {
+                    self.resolve_expr(superclass_expr, interpreter);
+                }
 
                 self.begin_scope();
                 self.scopes.last_mut().unwrap().insert("this".to_string(), true);

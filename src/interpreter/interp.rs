@@ -180,7 +180,7 @@ impl<'source> Interpreter<'source> {
                 self.execute_block(statements, new_env)?;
                 Ok(())
             }
-            Stmt::Class { name: _, methods: _ } => {
+            Stmt::Class { name: _, superclass: _, methods: _ } => {
                 let _value = self.evaluate_class(stmt.clone())?;
                 Ok(())
             }
@@ -246,8 +246,24 @@ impl<'source> Interpreter<'source> {
     }
 
     pub fn evaluate_class(&mut self, class: Stmt<'source>) -> Result<Value<'source>, RuntimeError<'source>> {
-        if let Stmt::Class { name, methods } = class {
+        if let Stmt::Class { name, superclass, methods } = class {
             self.environment.borrow_mut().define(name.lexeme.to_string(), Value::Nil);
+
+            let mut super_class_value: Option<Rc<LoxClass<'source>>> = None;
+            if let Some(super_expr) = superclass {
+                let eval = self.evaluate(super_expr.clone())?;
+                match eval {
+                    Value::Class(class_obj) => {
+                        super_class_value = Some(Rc::new(class_obj.clone()))
+                    }
+                    _ => {
+                        return Err(RuntimeError::TypeError { 
+                            msg: "Superclass must be a class.".to_string(), 
+                            line: name.line,
+                        })
+                    }
+                }
+            }
             let mut method_map: HashMap<String, Function<'source>> = HashMap::new();
             for method in methods {
                 let function = if method.name.as_ref().map(|name| name.lexeme) == Some("init") {
@@ -259,7 +275,7 @@ impl<'source> Interpreter<'source> {
                     method_map.insert(method_name.lexeme.to_string(), function);
                 }
             }
-            let klass = LoxClass::new(name.lexeme.to_string(), method_map);
+            let klass = LoxClass::new(name.lexeme.to_string(), method_map, super_class_value);
             self.environment.borrow_mut().assign(name, &Value::Class(klass))?;
             Ok(Value::Nil)
         } else {
