@@ -47,6 +47,22 @@ cargo run examples/recursive_fib.lox
 21
 ...
 ```
+# Debug
+You can print the tokens of a given file or `stdin` input.
+
+```bash
+cargo run show-tokens <file> # Scans the given file and prints its tokens.
+
+cargo run show-tokens - # Reads from stdin and prints tokens.
+```
+You can also print the parsed AST for a given file or input.
+
+```bash
+cargo run show-ast <file> [output.txt] # Prints the parsed AST for the given file. (defaults to ast_output.txt if no name is given
+
+cargo run show-ast - [output.txt] - # Stdin 
+```
+
 # Resources
 - [_Crafting Interpreters_](https://craftinginterpreters.com/)
 - _[The Rust Programming Language](https://doc.rust-lang.org/book/title-page.html)_ 
