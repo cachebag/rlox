@@ -25,6 +25,7 @@ enum FunctionType {
 enum ClassType {
     None,
     Class,
+    SubClass,
 }
 
 pub struct Resolver<'source> {
@@ -100,7 +101,15 @@ impl<'source> Resolver<'source> {
                 }
 
                 if let Some(superclass_expr) = &superclass {
+                    self.current_class = ClassType::SubClass;
                     self.resolve_expr(superclass_expr, interpreter);
+                }
+
+                if let Some(_superclass) = &superclass {
+                    self.begin_scope();
+                    if let Some(scope) = self.scopes.last_mut() {
+                        scope.insert("super".to_string(), true);
+                    };
                 }
 
                 self.begin_scope();
@@ -115,6 +124,11 @@ impl<'source> Resolver<'source> {
                     self.resolve_function(method, interpreter, declaration);
                 }
                 self.end_scope();
+
+                if let Some(_superclass) = &superclass {
+                    self.end_scope();
+                }
+
                 self.current_class = enclosing_class;
             }
             Stmt::Expression(expr) => self.resolve_expr(expr, interpreter),
@@ -196,6 +210,20 @@ impl<'source> Resolver<'source> {
             Expr::Set { object, name: _, value } => {
                 self.resolve_expr(value, interpreter);
                 self.resolve_expr(object, interpreter);   
+            }
+            Expr::Super { keyword, method: _ } => {
+                if self.current_class == ClassType::None {
+                    self.errors.push(CompilerError::SuperTypeError { 
+                        msg: "Can't use 'super' outside of a class.".to_string(), 
+                        line: keyword.line, 
+                    })
+                } else if self.current_class != ClassType::SubClass {
+                    self.errors.push(CompilerError::SuperTypeError { 
+                        msg: "Can't use 'super' in a class with no superclass.".to_string(), 
+                        line: keyword.line 
+                    })
+                }
+                self.resolve_local(expr.clone(), keyword, interpreter);
             }
             Expr::Get { object, name : _} => {
                 self.resolve_expr(object, interpreter);

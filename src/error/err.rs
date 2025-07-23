@@ -56,6 +56,7 @@ pub enum CompilerError<'source> {
     ThisOutsideClass{ keyword: Token<'source>},
     InitializerReturn{ keyword: Token<'source>},
     SelfInheritance{ line: usize },
+    SuperTypeError{ msg: String, line: usize },
 }
 
 impl fmt::Display for CompilerError<'_> {
@@ -78,6 +79,9 @@ impl fmt::Display for CompilerError<'_> {
             }
             CompilerError::SelfInheritance { line } => {
                 write!(f, "A class can't inherit from itself. Error on line {}", line)
+            }
+            CompilerError::SuperTypeError { msg, line } => {
+                write!(f, "{} on line {}", msg, line)
             }
         }
     }

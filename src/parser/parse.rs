@@ -560,6 +560,14 @@ impl <'source> Parser<'source> {
         })?.clone();
 
         match token.kind {
+            TokenType::Super => {
+                let keyword = self.advance().clone();
+                let method = self.consume(TokenType::Dot, "Expect '.' after 'super'.")?;
+                Ok(expr::Expr::Super { 
+                    keyword, 
+                    method, 
+                })
+            }
             TokenType::This => {
                 let keyword = self.advance().clone();
                 Ok(expr::Expr::This { keyword })

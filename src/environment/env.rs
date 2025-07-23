@@ -23,7 +23,7 @@ use crate::token::Token;
 pub type SharedEnv<'source> = Rc<RefCell<Environment<'source>>>;
 
 pub struct Environment<'source> {
-    enclosing: Option<SharedEnv<'source>>,
+    pub enclosing: Option<SharedEnv<'source>>,
     values: HashMap<String, Value<'source>>,
 }
 

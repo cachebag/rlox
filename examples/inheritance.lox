@@ -1,0 +1,36 @@
+class Animal {
+  init(name) {
+    this.name = name;
+  }
+  
+  speak() {
+    print this.name + " makes a sound";
+  }
+}
+
+class Dog < Animal {
+  speak() {
+    print this.name + " barks";
+  }
+  
+  wagTail() {
+    print this.name + " wags tail";
+  }
+}
+
+class Puppy < Dog {
+  speak() {
+    super.speak();
+    print "But it's just a tiny bark!";
+  }
+}
+
+var animal = Animal("Generic");
+animal.speak();
+
+var dog = Dog("Rex");
+dog.speak();
+dog.wagTail();
+
+var puppy = Puppy("Spot");
+puppy.speak();
