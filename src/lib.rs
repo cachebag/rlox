@@ -1,6 +1,5 @@
-// lib.rs 
-// author: akrm al-hakimi
-// Main module for the rlox interpreter
+// lib.rs
+// Main module for the rlox interpreter. Re-exports all core submodules.
 
 pub mod scanner;
 pub mod error;
@@ -13,4 +12,5 @@ pub mod callable;
 pub mod function;
 pub mod resolver;
 pub mod class;
+pub mod instance;
 pub mod instance;

@@ -1,6 +1,5 @@
-// token_types.rs 
-// author: akrm al-hakimi
-// This module defines the token types for the rlox interpreter
+// token_types.rs
+// Defines token types, literals, and the Token struct for lexical analysis in rlox.
 
 use std::fmt::{self, Formatter};
 
@@ -134,4 +133,5 @@ impl fmt::Display for TokenType {
         };
         write!(f, "{}", token_str)
     }
+}
 }

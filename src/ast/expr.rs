@@ -1,12 +1,5 @@
 // expr.rs
-// author: akrm al-hakimi
-// This module defines the expression AST for the rlox interpreter
-// Design notes:
-//             - In Rust, we can use enums to represent the different types of expressions as
-//             opposed to Java's class hierarchy.
-//             - Box<T> is used to allow for recursive types, as Rust does not allow direct
-//             recursion in types. This is still simpler than Java's visitor pattern because
-//             we can use the Display trait to traverse and print expressions directly.
+// Defines the expression AST nodes for the rlox interpreter using Rust enums and Rc for recursion.
 
 use crate::{
     ast::stmt::Stmt,
@@ -253,6 +246,13 @@ impl fmt::Display for Expr<'_> {
                 write!(f, "({}.{})", object, name)
             }
             Expr::Grouping(expr) => write!(f, "(group {})", expr),
+            Expr::Lambda { params, body } => {
+                let param_names: Vec<&str> = params.iter().map(|p| p.lexeme).collect();
+                write!(f, "(lambda [{}] {:?})", param_names.join(", "), body)
+            }
+        }
+    }
+}
             Expr::Lambda { params, body } => {
                 let param_names: Vec<&str> = params.iter().map(|p| p.lexeme).collect();
                 write!(f, "(lambda [{}] {:?})", param_names.join(", "), body)

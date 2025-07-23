@@ -1,13 +1,6 @@
 // env.rs
-// author: Akrm Al-Hakimi
+// Implements environment and scope management for variables in rlox.
 // Environment module for managing variable scopes in the interpreter 
-// We do this a bit different than in Java, of course...
-//                  - We don't get to use operator overloading for enclosing environments
-//                  so we have to use a Box to hold the enclosing environment recursively.
-//                  - Rust differs from Java in how recursive structures are handled:
-//                      - Recursive types (like a chain of environments) require indirection
-//                      - We use `Option<Box<Environment>>` to support nesting while maintaining known size at compile time
-// This forms the backbone of scope management for block scopes, functions, and closures in the interpreter.
 
 use std::{
     cell::RefCell, 

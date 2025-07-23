@@ -1,6 +1,5 @@
 // resolve.rs
-// author: akrm al-hakimi
-// // Module for resolving variable and function declarations in the rlox interpreter
+// Implements variable and function resolution for rlox, managing scopes and resolving identifiers.
 
 use std::collections::HashMap;
 
@@ -328,4 +327,5 @@ impl<'source> Resolver<'source> {
     pub fn take_errors(self) -> Vec<CompilerError<'source>> {
         self.errors
     }
+}
 }

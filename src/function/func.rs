@@ -1,6 +1,5 @@
-// func.rs 
-// author: akrm al-hakimi
-// This module defines the Function type, which represents a function in our interpreter.
+// func.rs
+// Implements function objects for rlox, supporting closures and binding.
 
 use crate::{
     ast::stmt::FunctionDecl, 
@@ -121,4 +120,5 @@ impl fmt::Display for Function <'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "<fn {}>", self.declaration.name.as_ref().map(|t| t.lexeme).unwrap_or("<anonymous>"))
     }
+}
 }

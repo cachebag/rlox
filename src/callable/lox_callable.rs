@@ -1,6 +1,5 @@
-// callable.rs
-// author: akrm al-hakimi
-// This file defines the Callable trait, which is used for functions and classes in our interpreter.
+// lox_callable.rs
+// Defines the Callable trait and native functions for rlox.
 
 
 use crate::error::RuntimeError;
@@ -45,4 +44,5 @@ impl fmt::Display for Clock {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "<native fn>")
     }
+}
 }

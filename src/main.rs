@@ -1,11 +1,10 @@
-// main.rs 
-// author: akrm al-hakimi
-// minimal REPL implementation and file runner for rlox interpreter
+// main.rs
+// Entry point for the rlox interpreter. Handles CLI arguments, REPL, and file execution.
 
 use std::{
     env, 
     fs, 
-    io::{self, Write}, 
+    io::{self, Write, Read}, 
     process,
 };
 
@@ -17,15 +16,20 @@ use rlox::{
 };
 
 fn main() {
-    let args: Vec<String> = env::args().skip(1).collect();
-
-    match args.len() {
-        0 => run_prompt(),
-        1 => run_file(&args[0]),
-        _ => {
-            eprintln!("Usage: rlox [script]");
-            process::exit(64);
+    let mut args = env::args().skip(1);
+    match args.next().as_deref() {
+        None => run_prompt(),
+        Some(cmd) if cmd == "--show-tokens" || cmd == "show-tokens" => {
+            match args.next().as_deref() {
+                Some("-") => show_tokens_stdin(),
+                Some(path) => show_tokens_file(path),
+                None => {
+                    eprintln!("Usage: rlox [--]show-tokens <file|->");
+                    process::exit(64);
+                }
+            }
         }
+        Some(path) => run_file(path),
     }
 }
 
@@ -103,6 +107,31 @@ fn run<'source>(source: &'source str, interpreter: &mut Interpreter<'source>) {
             } else {
                 eprintln!("Parser error: could not parse input as statement(s)");
             }
+        }
+    }
+}
+
+fn show_tokens_file(path: &str) {
+    let source = fs::read_to_string(path).expect("Could not read file");
+    show_tokens(&source);
+}
+
+fn show_tokens_stdin() {
+    let mut source = String::new();
+    io::stdin().read_to_string(&mut source).expect("Failed to read stdin");
+    show_tokens(&source);
+}
+
+fn show_tokens(source: &str) {
+    let mut scanner = Scanner::new(source);
+    match scanner.scan_tokens() {
+        Ok(tokens) => {
+            for token in tokens {
+                println!("{:?}", token);
+            }
+        }
+        Err(e) => {
+            eprintln!("Scanner error: {}", e);
         }
     }
 }

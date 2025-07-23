@@ -1,6 +1,5 @@
-// inst.rs 
-// author: akrm al-hakimi
-// instance structure 
+// inst.rs
+// Implements LoxInstance, representing object instances in rlox.
 
 use std::{
     collections::HashMap,
@@ -53,4 +52,5 @@ impl std::fmt::Display for LoxInstance<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.klass)
     }
+}
 }

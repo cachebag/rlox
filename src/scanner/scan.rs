@@ -1,6 +1,5 @@
-// scan.rs 
-// author: akrm al-hakimi
-// Our scanner "class" to parse through and organize source code.
+// scan.rs
+// Implements the lexical scanner for rlox, converting source code into tokens.
 
 
 use std::{collections::HashMap, sync::RwLock};
@@ -352,4 +351,5 @@ impl <'source> Scanner<'source> {
         };
         self.tokens.push(token);
     }
+}
 }

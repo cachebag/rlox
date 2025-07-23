@@ -1,6 +1,5 @@
-// stmt.rs 
-// author: akrm al-hakimi
-// This module defines the statement AST for the rlox interpreter
+// stmt.rs
+// Defines the statement AST nodes for the rlox interpreter, including function, class, and control flow constructs.
 
 use crate::ast::expr::Expr;
 use crate::token::Token;
@@ -44,4 +43,5 @@ pub enum Stmt<'source> {
     Break {
         keyword: Token<'source>,
     },
+}
 }

@@ -1,6 +1,5 @@
-// err.rs 
-// author: akrm al-hakimi
-// error types for the scanner and any future components 
+// err.rs
+// Defines error types for scanner, parser, runtime, and compiler phases in rlox.
 
 use std::{fmt, io};
 use crate::token::{
@@ -191,4 +190,5 @@ impl From<io::Error> for ScannerError {
     fn from(e: io::Error) -> Self { 
         Self::Io(e)
     } 
+}
 }

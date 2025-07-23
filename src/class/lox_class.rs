@@ -1,4 +1,6 @@
-// loxclass.rs 
+// lox_class.rs
+// Implements LoxClass, representing class objects and inheritance in rlox.
+
 // author: akrm al-hakimi
 // our class
 

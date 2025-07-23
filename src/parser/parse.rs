@@ -1,11 +1,5 @@
-// parse.rs 
-// author: akrm al-hakimi
-// recursive descent parser for our rlox interpreter
-// Design notes:
-//         - The parser uses a recursive descent approach, which is simple and effective for our
-//         grammar.
-//         - Unlike Java, Rust's ownership model allows us to use references and lifetimes to manage 
-//         the lifetime of tokens and expressions without needing to pass around mutable references.
+// parse.rs
+// Implements the recursive descent parser for rlox, producing AST nodes from tokens.
 
 use crate::{
     ast::{
@@ -720,6 +714,12 @@ impl <'source> Parser<'source> {
             if types.contains(&token.kind) {
                 self.advance();
                 return true;
+            }
+        }
+        false
+    }
+
+}
             }
         }
         false
