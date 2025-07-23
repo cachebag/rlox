@@ -93,7 +93,7 @@ fn run<'source>(source: &'source str, interpreter: &mut Interpreter<'source>) {
                     Ok(expr) => match interpreter.evaluate(expr.into()) {
                         Ok(value) => {
                             if !matches!(value, Value::Nil) {
-                                println!("{}", value);
+                                // println!("{}", value);
                             }
                         }
                         Err(e) => eprintln!("Runtime error: {}", e),
