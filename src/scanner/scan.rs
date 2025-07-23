@@ -352,4 +352,3 @@ impl <'source> Scanner<'source> {
         self.tokens.push(token);
     }
 }
-}

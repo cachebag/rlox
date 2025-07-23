@@ -53,4 +53,3 @@ impl std::fmt::Display for LoxInstance<'_> {
         write!(f, "{}", self.klass)
     }
 }
-}

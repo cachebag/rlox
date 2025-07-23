@@ -716,9 +716,3 @@ impl fmt::Display for Value<'_> {
         }
     }
 }
-                    write!(f, "{} instance", borrowed)
-            }
-
-        }
-    }
-}

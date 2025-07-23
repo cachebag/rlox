@@ -191,4 +191,3 @@ impl From<io::Error> for ScannerError {
         Self::Io(e)
     } 
 }
-}

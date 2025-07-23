@@ -328,4 +328,3 @@ impl<'source> Resolver<'source> {
         self.errors
     }
 }
-}

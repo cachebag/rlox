@@ -45,4 +45,3 @@ impl fmt::Display for Clock {
         write!(f, "<native fn>")
     }
 }
-}

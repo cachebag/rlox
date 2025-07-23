@@ -134,4 +134,3 @@ impl fmt::Display for TokenType {
         write!(f, "{}", token_str)
     }
 }
-}

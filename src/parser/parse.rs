@@ -720,9 +720,3 @@ impl <'source> Parser<'source> {
     }
 
 }
-            }
-        }
-        false
-    }
-
-}

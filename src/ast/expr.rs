@@ -253,10 +253,3 @@ impl fmt::Display for Expr<'_> {
         }
     }
 }
-            Expr::Lambda { params, body } => {
-                let param_names: Vec<&str> = params.iter().map(|p| p.lexeme).collect();
-                write!(f, "(lambda [{}] {:?})", param_names.join(", "), body)
-            }
-        }
-    }
-}

@@ -13,4 +13,3 @@ pub mod function;
 pub mod resolver;
 pub mod class;
 pub mod instance;
-pub mod instance;
