@@ -137,10 +137,7 @@ impl<'source> Expr<'source> {
     }
 
     pub fn _super(keyword: Token<'source>, method: Token<'source>) -> Self {
-        Self::Super { 
-            keyword,
-            method, 
-        }
+        Self::Super { keyword, method }
     }
 
     pub fn this(keyword: Token<'source>) -> Self {

@@ -1,54 +1,55 @@
 // scan.rs
 // Implements the lexical scanner for rlox, converting source code into tokens.
 
-
-use std::{collections::HashMap, sync::RwLock};
 use once_cell::sync::Lazy;
+use std::{collections::HashMap, sync::RwLock};
 
-use crate::{error::ScannerError, token::{TokenType, Literal, Token}};
+use crate::{
+    error::ScannerError,
+    token::{Literal, Token, TokenType},
+};
 
-// Scanner struct to hold the state of the Scanner 
+// Scanner struct to hold the state of the Scanner
 // The impl block contains methods to scan the source code and produce tokens.
 // Again, this is our imitation of Java's class behavior in Rust.
 pub struct Scanner<'source> {
-    source: &'source str, 
-    tokens: Vec<Token<'source>>, // This will hold the tokens we produce 
+    source: &'source str,
+    tokens: Vec<Token<'source>>, // This will hold the tokens we produce
     start: usize,
     current: usize,
     line: usize,
 }
 
 // This is our "static initializer" for keywords.
-// 
+//
 static KEYWORDS: Lazy<RwLock<HashMap<&'static str, TokenType>>> = Lazy::new(|| {
     let mut m = HashMap::new();
-    m.insert("and",          TokenType::And);
-    m.insert("class",        TokenType::Class);
-    m.insert("else",         TokenType::Else);
-    m.insert("false",        TokenType::False);
-    m.insert("for",          TokenType::For);
-    m.insert("fn",          TokenType::Fn);
-    m.insert("if",           TokenType::If);
-    m.insert("nil",          TokenType::Nil);
-    m.insert("or",           TokenType::Or);
-    m.insert("print",        TokenType::Print);
-    m.insert("return",       TokenType::Return);
-    m.insert("super",        TokenType::Super);
-    m.insert("this",         TokenType::This);
-    m.insert("true",         TokenType::True);
-    m.insert("var",          TokenType::Var);
-    m.insert("while",        TokenType::While);
-    m.insert("break",         TokenType::Break);
+    m.insert("and", TokenType::And);
+    m.insert("class", TokenType::Class);
+    m.insert("else", TokenType::Else);
+    m.insert("false", TokenType::False);
+    m.insert("for", TokenType::For);
+    m.insert("fn", TokenType::Fn);
+    m.insert("if", TokenType::If);
+    m.insert("nil", TokenType::Nil);
+    m.insert("or", TokenType::Or);
+    m.insert("print", TokenType::Print);
+    m.insert("return", TokenType::Return);
+    m.insert("super", TokenType::Super);
+    m.insert("this", TokenType::This);
+    m.insert("true", TokenType::True);
+    m.insert("var", TokenType::Var);
+    m.insert("while", TokenType::While);
+    m.insert("break", TokenType::Break);
     RwLock::new(m)
-}); 
+});
 
-impl <'source> Scanner<'source> {
-    
+impl<'source> Scanner<'source> {
     pub fn new(source: &'source str) -> Self {
         Self {
             source,
             tokens: Vec::new(),
-            start: 0, // &str is byte indexed 
+            start: 0, // &str is byte indexed
             current: 0,
             line: 1, // but lines always start at 1
         }
@@ -61,11 +62,11 @@ impl <'source> Scanner<'source> {
         }
 
         // Add the EOF token at the end of the tokens vector
-        self.tokens.push(Token::new(TokenType::Eof, "", None, self.line));
+        self.tokens
+            .push(Token::new(TokenType::Eof, "", None, self.line));
         Ok(std::mem::take(&mut self.tokens))
-
     }
-    
+
     fn scan_token(&mut self) -> Result<(), ScannerError> {
         let c = self.advance();
         // In Rust, match arms implicitly break
@@ -83,7 +84,7 @@ impl <'source> Scanner<'source> {
                     TokenType::Minus
                 };
                 self.add_token(kind);
-            },
+            }
             Some('+') => {
                 let kind = if self.match_char('+') {
                     TokenType::Increment
@@ -91,7 +92,7 @@ impl <'source> Scanner<'source> {
                     TokenType::Plus
                 };
                 self.add_token(kind);
-            },
+            }
             Some(';') => self.add_token(TokenType::Semicolon),
             Some('*') => self.add_token(TokenType::Star),
             Some('?') => self.add_token(TokenType::Question),
@@ -144,28 +145,32 @@ impl <'source> Scanner<'source> {
                     self.add_token(k);
                 }
             }
-            Some(' ')  => {},
-            Some('\r') => {},
-            Some('\t') => {},
+            Some(' ') => {}
+            Some('\r') => {}
+            Some('\t') => {}
             Some('\n') => self.line += 1,
-            Some('"')  => self.string()?,
-            Some(c)   =>  {
+            Some('"') => self.string()?,
+            Some(c) => {
                 if self.is_digit(c) {
                     self.number()?;
                 } else if self.is_alpha(c) {
                     self.identifier();
                 } else {
-                return Err(ScannerError::UnexpectedChar(c, self.line))
+                    return Err(ScannerError::UnexpectedChar(c, self.line));
                 };
             }
-            None       => {},
+            None => {}
         };
         Ok(())
     }
 
     fn identifier(&mut self) {
         // we don't want rusts built in is_alphabetic() because it includes non-ascii characters
-        while self.peek().map(|c| self.is_alpha_numeric(c)).unwrap_or(false) { 
+        while self
+            .peek()
+            .map(|c| self.is_alpha_numeric(c))
+            .unwrap_or(false)
+        {
             self.advance();
         }
 
@@ -184,11 +189,14 @@ impl <'source> Scanner<'source> {
             self.advance();
         }
 
-        if self.peek() == Some('.') &&
-            self.peek_next().map(|c| c.is_ascii_digit()).unwrap_or(false)
+        if self.peek() == Some('.')
+            && self
+                .peek_next()
+                .map(|c| c.is_ascii_digit())
+                .unwrap_or(false)
         {
             self.advance(); // consume the '.'
-            
+
             while self.peek().map(|c| c.is_ascii_digit()).unwrap_or(false) {
                 self.advance();
             }
@@ -203,41 +211,42 @@ impl <'source> Scanner<'source> {
 
     fn string(&mut self) -> Result<(), ScannerError> {
         let mut value = String::new(); // Build the actual string value
-    
+
         while let Some(ch) = self.peek() {
             match ch {
-                '"'  => break,                  // End of string  
-                '\n' => { 
-                    self.line += 1; 
-                    value.push('\n');           // Add actual newline to string
+                '"' => break, // End of string
+                '\n' => {
+                    self.line += 1;
+                    value.push('\n'); // Add actual newline to string
                     self.advance();
-                },    
-                '\\' => {                       // Escape sequence  
+                }
+                '\\' => {
+                    // Escape sequence
                     self.advance(); // consume the '\'
                     if self.is_at_end() {
                         return Err(ScannerError::UnterminatedEscape(self.line));
                     }
-                
+
                     // Process the escape character
                     match self.peek() {
                         Some('n') => {
-                            value.push('\n');   // Actual newline
+                            value.push('\n'); // Actual newline
                             self.advance();
                         }
                         Some('t') => {
-                            value.push('\t');   // Actual tab
+                            value.push('\t'); // Actual tab
                             self.advance();
                         }
                         Some('r') => {
-                            value.push('\r');   // Carriage return
+                            value.push('\r'); // Carriage return
                             self.advance();
                         }
                         Some('\\') => {
-                            value.push('\\');   // Literal backslash
+                            value.push('\\'); // Literal backslash
                             self.advance();
                         }
                         Some('"') => {
-                            value.push('"');    // Escaped quote
+                            value.push('"'); // Escaped quote
                             self.advance();
                         }
                         Some(c) => {
@@ -249,13 +258,13 @@ impl <'source> Scanner<'source> {
                         None => return Err(ScannerError::UnterminatedEscape(self.line)),
                     }
                 }
-                c => { 
-                    value.push(c);              // Regular character
-                    self.advance(); 
+                c => {
+                    value.push(c); // Regular character
+                    self.advance();
                 }
             };
         }
-    
+
         // If we reach here, we either found a closing quote or reached the end of the source
         if self.is_at_end() {
             return Err(ScannerError::UnterminatedString(self.line));
@@ -271,16 +280,18 @@ impl <'source> Scanner<'source> {
     }
 
     fn match_char(&mut self, expected: char) -> bool {
-        if self.is_at_end() { return false; }
+        if self.is_at_end() {
+            return false;
+        }
 
-        // SAFETY: current is always a char boundary by construction 
+        // SAFETY: current is always a char boundary by construction
         let slice = &self.source[self.current..];
         let mut chars = slice.chars();
         if chars.next() != Some(expected) {
             return false;
         }
 
-        self.current += expected.len_utf8();   // move by byte length
+        self.current += expected.len_utf8(); // move by byte length
         true
     }
 
@@ -298,12 +309,12 @@ impl <'source> Scanner<'source> {
         c.is_ascii_alphabetic() || c == '_'
     }
 
-    fn is_alpha_numeric(&mut self, c:char) -> bool {
+    fn is_alpha_numeric(&mut self, c: char) -> bool {
         self.is_alpha(c) || c.is_ascii_digit()
     }
 
     fn is_digit(&mut self, c: char) -> bool {
-        return c >= '0' && c <= '9'
+        return c >= '0' && c <= '9';
     }
 
     fn advance(&mut self) -> Option<char> {
@@ -312,7 +323,6 @@ impl <'source> Scanner<'source> {
         Some(ch)
     }
 
-    
     fn consume_multiline_comment(&mut self) -> Result<(), ScannerError> {
         loop {
             match self.peek() {
@@ -336,7 +346,7 @@ impl <'source> Scanner<'source> {
         }
     }
 
-    // There is no overload in Rust, so we need to use different methods for adding tokens 
+    // There is no overload in Rust, so we need to use different methods for adding tokens
     fn add_token(&mut self, token_type: TokenType) {
         self.add_token_with_literal(token_type, None)
     }

@@ -1,7 +1,6 @@
 // lox_callable.rs
 // Defines the Callable trait and native functions for rlox.
 
-
 use crate::error::RuntimeError;
 use crate::interpreter::Interpreter;
 use crate::interpreter::Value;

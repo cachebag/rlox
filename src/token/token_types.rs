@@ -3,7 +3,7 @@
 
 use std::fmt::{self, Formatter};
 
-// This struct + impl allows us to imitate OOP's class behavior. 
+// This struct + impl allows us to imitate OOP's class behavior.
 // Data and behavior is seperated here but pairing is conceptually the same
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token<'source> {
@@ -13,19 +13,23 @@ pub struct Token<'source> {
     pub line: usize,
 }
 
-impl <'source> Token<'source> {
-    
+impl<'source> Token<'source> {
     pub fn new(
         kind: TokenType,
         lexeme: &'source str,
         literal: Option<Literal>,
         line: usize,
     ) -> Self {
-        Self { kind, lexeme, literal, line }
+        Self {
+            kind,
+            lexeme,
+            literal,
+            line,
+        }
     }
 }
 
-// Strongly typed vesion of Java's raw 'Object' literal 
+// Strongly typed vesion of Java's raw 'Object' literal
 #[derive(Debug, Clone, PartialEq)]
 pub enum Literal {
     Str(String),
@@ -38,21 +42,55 @@ pub enum Literal {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenType {
     // Single-character tokens
-    LeftParen, RightParen, LeftBrace, RightBrace,
-    Comma, Dot, Minus, Plus, Semicolon, Slash, Star,
-    Question, Colon,
+    LeftParen,
+    RightParen,
+    LeftBrace,
+    RightBrace,
+    Comma,
+    Dot,
+    Minus,
+    Plus,
+    Semicolon,
+    Slash,
+    Star,
+    Question,
+    Colon,
 
     // One or two character tokens
-    Bang, BangEqual, Equal, EqualEqual,
-    Greater, GreaterEqual, Less, LessEqual,
-    Increment, Decrement,
+    Bang,
+    BangEqual,
+    Equal,
+    EqualEqual,
+    Greater,
+    GreaterEqual,
+    Less,
+    LessEqual,
+    Increment,
+    Decrement,
 
     // Literals
-    Identifier, String, Number,
+    Identifier,
+    String,
+    Number,
 
     // Keywords
-    And, Class, Else, False, Fn, For, If, Nil, Or,
-    Print, Return, Super, This, True, Var, While, Break,
+    And,
+    Class,
+    Else,
+    False,
+    Fn,
+    For,
+    If,
+    Nil,
+    Or,
+    Print,
+    Return,
+    Super,
+    This,
+    True,
+    Var,
+    While,
+    Break,
 
     Eof,
 }
@@ -69,9 +107,9 @@ impl fmt::Display for Literal {
         match self {
             Literal::Num(n) => write!(f, "{n}"),
             Literal::Str(s) => write!(f, "\"{s}\""),
-            Literal::True   => write!(f, "True"),
-            Literal::False   => write!(f, "False"),
-            Literal::Nil       => write!(f, "nil"),
+            Literal::True => write!(f, "True"),
+            Literal::False => write!(f, "False"),
+            Literal::Nil => write!(f, "nil"),
         }
     }
 }
@@ -93,7 +131,7 @@ impl fmt::Display for TokenType {
             TokenType::Star => "*",
             TokenType::Question => "?",
             TokenType::Colon => ":",
-            
+
             // One or two character tokens
             TokenType::Bang => "!",
             TokenType::BangEqual => "!=",
@@ -105,12 +143,12 @@ impl fmt::Display for TokenType {
             TokenType::LessEqual => "<=",
             TokenType::Increment => "++",
             TokenType::Decrement => "--",
-            
+
             // Literals
             TokenType::Identifier => "IDENTIFIER",
             TokenType::String => "STRING",
             TokenType::Number => "NUMBER",
-            
+
             // Keywords
             TokenType::And => "and",
             TokenType::Class => "class",

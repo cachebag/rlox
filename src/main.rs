@@ -2,17 +2,16 @@
 // Entry point for the rlox interpreter. Handles CLI arguments, REPL, and file execution.
 
 use std::{
-    env, 
-    fs, 
-    io::{self, Write, Read}, 
+    env, fs,
+    io::{self, Read, Write},
     process,
 };
 
 use rlox::{
     interpreter::{Interpreter, Value},
-    parser::Parser, 
-    scanner::Scanner,
+    parser::Parser,
     resolver::Resolver,
+    scanner::Scanner,
 };
 use std::fs::File;
 
@@ -30,22 +29,20 @@ fn main() {
                 }
             }
         }
-        Some(cmd) if cmd == "--show-ast" || cmd == "show-ast" => {
-            match args.next().as_deref() {
-                Some("-") => {
-                    let output = args.next().unwrap_or_else(|| "ast_output.txt".to_string());
-                    show_ast_stdin_with_output(&output);
-                }
-                Some(path) => {
-                    let output = args.next().unwrap_or_else(|| "ast_output.txt".to_string());
-                    show_ast_file_with_output(path, &output);
-                }
-                None => {
-                    eprintln!("Usage: rlox [--]show-ast <file|-> [output.txt]");
-                    process::exit(64);
-                }
+        Some(cmd) if cmd == "--show-ast" || cmd == "show-ast" => match args.next().as_deref() {
+            Some("-") => {
+                let output = args.next().unwrap_or_else(|| "ast_output.txt".to_string());
+                show_ast_stdin_with_output(&output);
             }
-        }
+            Some(path) => {
+                let output = args.next().unwrap_or_else(|| "ast_output.txt".to_string());
+                show_ast_file_with_output(path, &output);
+            }
+            None => {
+                eprintln!("Usage: rlox [--]show-ast <file|-> [output.txt]");
+                process::exit(64);
+            }
+        },
         Some(cmd) if cmd == "--show-resolve" || cmd == "show-resolve" => {
             match args.next().as_deref() {
                 Some("-") => show_resolve_stdin(),
@@ -145,7 +142,9 @@ fn show_tokens_file(path: &str) {
 
 fn show_tokens_stdin() {
     let mut source = String::new();
-    io::stdin().read_to_string(&mut source).expect("Failed to read stdin");
+    io::stdin()
+        .read_to_string(&mut source)
+        .expect("Failed to read stdin");
     show_tokens(&source);
 }
 
@@ -170,7 +169,9 @@ fn show_ast_file_with_output(path: &str, output: &str) {
 
 fn show_ast_stdin_with_output(output: &str) {
     let mut source = String::new();
-    io::stdin().read_to_string(&mut source).expect("Failed to read stdin");
+    io::stdin()
+        .read_to_string(&mut source)
+        .expect("Failed to read stdin");
     show_ast_to_file(&source, output);
 }
 
@@ -212,7 +213,9 @@ fn show_resolve_file(path: &str) {
 
 fn show_resolve_stdin() {
     let mut source = String::new();
-    io::stdin().read_to_string(&mut source).expect("Failed to read stdin");
+    io::stdin()
+        .read_to_string(&mut source)
+        .expect("Failed to read stdin");
     show_resolve(&source);
 }
 
@@ -245,4 +248,3 @@ fn show_resolve(source: &str) {
         }
     }
 }
-

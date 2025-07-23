@@ -14,8 +14,8 @@ pub struct FunctionDecl<'source> {
 
 #[derive(Debug, Clone)]
 pub enum Stmt<'source> {
-    Block(Vec<Stmt<'source>>),    
-    Class {    
+    Block(Vec<Stmt<'source>>),
+    Class {
         name: Token<'source>,
         superclass: Option<Rc<Expr<'source>>>,
         methods: Vec<FunctionDecl<'source>>,

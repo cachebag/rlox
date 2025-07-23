@@ -4,19 +4,16 @@
 // author: akrm al-hakimi
 // our class
 
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::cell::RefCell;
 
 use crate::{
-    error::RuntimeError, 
-    interpreter::{
-        Interpreter, 
-        Value
-    },
     callable::Callable,
-    instance::LoxInstance,
+    error::RuntimeError,
     function::Function,
+    instance::LoxInstance,
+    interpreter::{Interpreter, Value},
 };
 
 #[derive(Debug, Clone)]
@@ -26,8 +23,12 @@ pub struct LoxClass<'source> {
     methods: HashMap<String, Function<'source>>,
 }
 
-impl <'source> LoxClass<'source>{
-    pub fn new(name: String, methods: HashMap<String, Function<'source>>, superclass: Option<Rc<LoxClass<'source>>>) -> Self {
+impl<'source> LoxClass<'source> {
+    pub fn new(
+        name: String,
+        methods: HashMap<String, Function<'source>>,
+        superclass: Option<Rc<LoxClass<'source>>>,
+    ) -> Self {
         Self {
             name,
             methods,
@@ -47,16 +48,15 @@ impl <'source> LoxClass<'source>{
     }
 }
 
-impl <'source> Callable<'source> for LoxClass<'source> {
-
+impl<'source> Callable<'source> for LoxClass<'source> {
     fn call(
-        &self, 
-        interpreter: &mut Interpreter<'source>, 
-        args: Vec<Value<'source>>
+        &self,
+        interpreter: &mut Interpreter<'source>,
+        args: Vec<Value<'source>>,
     ) -> Result<Value<'source>, RuntimeError<'source>> {
         let instance = Rc::new(RefCell::new(LoxInstance::new(self.clone())));
 
-        if let Some(initializer )= self.find_method("init") {
+        if let Some(initializer) = self.find_method("init") {
             initializer.bind(instance.clone()).call(interpreter, args)?;
         }
         Ok(Value::Instance(instance))
@@ -69,7 +69,6 @@ impl <'source> Callable<'source> for LoxClass<'source> {
             0
         }
     }
-
 }
 
 impl std::fmt::Display for LoxClass<'_> {

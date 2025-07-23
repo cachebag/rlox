@@ -1,17 +1,10 @@
 // env.rs
 // Implements environment and scope management for variables in rlox.
-// Environment module for managing variable scopes in the interpreter 
+// Environment module for managing variable scopes in the interpreter
 
-use std::{
-    cell::RefCell, 
-    collections::HashMap, 
-    rc::Rc 
-};
-use crate::{
-    error::RuntimeError, 
-    interpreter::Value
-};
 use crate::token::Token;
+use crate::{error::RuntimeError, interpreter::Value};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 pub type SharedEnv<'source> = Rc<RefCell<Environment<'source>>>;
 
@@ -20,8 +13,7 @@ pub struct Environment<'source> {
     values: HashMap<String, Value<'source>>,
 }
 
-impl <'source> Environment<'source> {
-    
+impl<'source> Environment<'source> {
     pub fn new() -> SharedEnv<'source> {
         Rc::new(RefCell::new(Self {
             values: HashMap::new(),
@@ -57,7 +49,11 @@ impl <'source> Environment<'source> {
         Some(current)
     }
 
-    pub fn get_at(env: SharedEnv<'source>, distance: usize, name: &Token<'source>) -> Result<Value<'source>, RuntimeError<'source>> {
+    pub fn get_at(
+        env: SharedEnv<'source>,
+        distance: usize,
+        name: &Token<'source>,
+    ) -> Result<Value<'source>, RuntimeError<'source>> {
         if let Some(target) = Self::ancestor(env, distance) {
             target.borrow().get(name)
         } else {
@@ -67,7 +63,11 @@ impl <'source> Environment<'source> {
         }
     }
 
-    pub fn get_at_string(env: SharedEnv<'source>, distance: usize, name: &str) -> Result<Value<'source>, RuntimeError<'source>> {
+    pub fn get_at_string(
+        env: SharedEnv<'source>,
+        distance: usize,
+        name: &str,
+    ) -> Result<Value<'source>, RuntimeError<'source>> {
         if let Some(target) = Self::ancestor(env, distance) {
             if let Some(value) = target.borrow().values.get(name) {
                 Ok(value.clone())
@@ -81,22 +81,22 @@ impl <'source> Environment<'source> {
                 found: name.to_string(),
             })
         }
-}
+    }
 
     pub fn assign_at(
-        env: SharedEnv<'source>, 
-        distance: usize, 
-        name: Token<'source>, 
-        val: &Value<'source>
+        env: SharedEnv<'source>,
+        distance: usize,
+        name: Token<'source>,
+        val: &Value<'source>,
     ) -> Result<Value<'source>, RuntimeError<'source>> {
         if let Some(scope) = Self::ancestor(env, distance) {
             scope.borrow_mut().assign(name, val)
         } else {
-            Err(RuntimeError::UndefinedVariable { 
-                found: name.lexeme.to_string() 
+            Err(RuntimeError::UndefinedVariable {
+                found: name.lexeme.to_string(),
             })
         }
-    } 
+    }
 
     pub fn get(&self, name: &Token) -> Result<Value<'source>, RuntimeError<'source>> {
         if let Some(val) = self.values.get(name.lexeme) {
@@ -107,16 +107,16 @@ impl <'source> Environment<'source> {
             Err(RuntimeError::UndefinedVariable {
                 found: name.lexeme.to_string(),
             })
-        }  
+        }
     }
- 
+
     pub fn assign(
         &mut self,
         name: Token<'source>,
         val: &Value<'source>,
     ) -> Result<Value<'source>, RuntimeError<'source>> {
         let key = name.lexeme.to_string();
-    
+
         if self.values.insert(key.clone(), val.clone()).is_some() {
             Ok(val.clone())
         } else {
@@ -124,11 +124,8 @@ impl <'source> Environment<'source> {
             if let Some(enclosing) = self.enclosing.clone() {
                 enclosing.borrow_mut().assign(name, val)
             } else {
-                Err(RuntimeError::UndefinedVariable {
-                    found: key,
-                })
+                Err(RuntimeError::UndefinedVariable { found: key })
             }
         }
     }
-
 }

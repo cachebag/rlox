@@ -3,27 +3,24 @@
 
 use crate::{
     ast::{
-        expr::Expr, stmt::{FunctionDecl, Stmt}
-    }, callable::{
-        Callable,
-        Clock,
-    }, class::LoxClass, environment::env::{
-            Environment,
-            SharedEnv,
-        }, error::RuntimeError, function::Function, instance::{LoxInstance}, token::{
-        Literal, 
-        Token, 
-        TokenType
-    }
+        expr::Expr,
+        stmt::{FunctionDecl, Stmt},
+    },
+    callable::{Callable, Clock},
+    class::LoxClass,
+    environment::env::{Environment, SharedEnv},
+    error::RuntimeError,
+    function::Function,
+    instance::LoxInstance,
+    token::{Literal, Token, TokenType},
 };
-use core::fmt;
-use std::{cell::RefCell, rc::Rc};
-use std::collections::HashMap;
 use by_address::ByAddress;
+use core::fmt;
+use std::collections::HashMap;
+use std::{cell::RefCell, rc::Rc};
 
 type ExprRef<'source> = Rc<Expr<'source>>;
 type ExprKey<'source> = ByAddress<ExprRef<'source>>;
-
 
 pub struct Interpreter<'source> {
     pub globals: SharedEnv<'source>,
@@ -79,10 +76,7 @@ impl<'source> Interpreter<'source> {
         }
     }
 
-    pub fn interpret(
-        &mut self,
-        statements: &[Stmt<'source>],
-    ) -> Result<(), RuntimeError<'source>> {
+    pub fn interpret(&mut self, statements: &[Stmt<'source>]) -> Result<(), RuntimeError<'source>> {
         for statement in statements {
             self.execute(statement)?
         }
@@ -96,7 +90,9 @@ impl<'source> Interpreter<'source> {
         match &*expr {
             Expr::Lambda { params, body } => self.evaluate_lambda(params.clone(), body.clone()),
             Expr::Literal(lit) => self.evaluate_literal(lit.clone()),
-            Expr::Unary { operator, right } => self.evaluate_unary(operator.clone(), &right.clone()),
+            Expr::Unary { operator, right } => {
+                self.evaluate_unary(operator.clone(), &right.clone())
+            }
             Expr::Mutate {
                 operator,
                 operand,
@@ -107,7 +103,9 @@ impl<'source> Interpreter<'source> {
                 paren,
                 args,
             } => self.evaluate_call(callee.clone(), paren.clone(), args.clone()),
-            Expr::Assign { name, value } => self.evaluate_assignment(expr.clone(), name.clone(), value.clone()),
+            Expr::Assign { name, value } => {
+                self.evaluate_assignment(expr.clone(), name.clone(), value.clone())
+            }
             Expr::Binary {
                 left,
                 operator,
@@ -121,12 +119,12 @@ impl<'source> Interpreter<'source> {
                     self.globals.borrow().get(name)
                 }
             }
-            Expr::Get { object, name } => {
-                self.evaluate_get(object.clone(), name.clone())
-            }
-            Expr::Set { object, name, value } => {
-                self.evaluate_set(object, name.clone(), value)
-            }
+            Expr::Get { object, name } => self.evaluate_get(object.clone(), name.clone()),
+            Expr::Set {
+                object,
+                name,
+                value,
+            } => self.evaluate_set(object, name.clone(), value),
             Expr::Super { keyword, method } => {
                 self.evaluate_super(expr.clone(), keyword.clone(), method.clone())
             }
@@ -141,7 +139,7 @@ impl<'source> Interpreter<'source> {
             Expr::Grouping(inner) => self.evaluate(inner.clone()),
             Expr::Ternary {
                 condition,
-                true_expr, 
+                true_expr,
                 false_expr,
             } => self.evaluate_ternary(condition.clone(), true_expr.clone(), false_expr.clone()),
             Expr::Logical {
@@ -162,7 +160,11 @@ impl<'source> Interpreter<'source> {
             is_initializer: false,
         };
         self.environment.borrow_mut().define(
-            decl.name.as_ref().map(|t| t.lexeme).unwrap_or("<anonymous>").to_string(),
+            decl.name
+                .as_ref()
+                .map(|t| t.lexeme)
+                .unwrap_or("<anonymous>")
+                .to_string(),
             Value::Callable(Rc::new(function)),
         );
         Ok(())
@@ -175,7 +177,11 @@ impl<'source> Interpreter<'source> {
                 self.execute_block(statements, new_env)?;
                 Ok(())
             }
-            Stmt::Class { name: _, superclass: _, methods: _ } => {
+            Stmt::Class {
+                name: _,
+                superclass: _,
+                methods: _,
+            } => {
                 let _value = self.evaluate_class(stmt.clone())?;
                 Ok(())
             }
@@ -232,17 +238,25 @@ impl<'source> Interpreter<'source> {
         let previous = self.environment.clone();
         self.environment = new_env;
 
-        let result = statements
-            .iter()
-            .try_for_each(|stmt| self.execute(stmt));
+        let result = statements.iter().try_for_each(|stmt| self.execute(stmt));
 
         self.environment = previous;
         result
     }
 
-    pub fn evaluate_class(&mut self, class: Stmt<'source>) -> Result<Value<'source>, RuntimeError<'source>> {
-        if let Stmt::Class { name, superclass, methods } = class {
-            self.environment.borrow_mut().define(name.lexeme.to_string(), Value::Nil);
+    pub fn evaluate_class(
+        &mut self,
+        class: Stmt<'source>,
+    ) -> Result<Value<'source>, RuntimeError<'source>> {
+        if let Stmt::Class {
+            name,
+            superclass,
+            methods,
+        } = class
+        {
+            self.environment
+                .borrow_mut()
+                .define(name.lexeme.to_string(), Value::Nil);
 
             let mut super_class_value: Option<Rc<LoxClass<'source>>> = None;
             if let Some(super_expr) = &superclass {
@@ -251,15 +265,20 @@ impl<'source> Interpreter<'source> {
                     Value::Class(class_obj) => {
                         super_class_value = Some(class_obj.clone());
 
-                        let new_env: Rc<RefCell<Environment>> = Environment::from_enclosing(self.environment.clone());
-                        Environment::define(&mut new_env.borrow_mut(),"super".to_string(), Value::Class(class_obj.clone()));
+                        let new_env: Rc<RefCell<Environment>> =
+                            Environment::from_enclosing(self.environment.clone());
+                        Environment::define(
+                            &mut new_env.borrow_mut(),
+                            "super".to_string(),
+                            Value::Class(class_obj.clone()),
+                        );
                         self.environment = new_env;
                     }
                     _ => {
-                        return Err(RuntimeError::TypeError { 
-                            msg: "Superclass must be a class.".to_string(), 
+                        return Err(RuntimeError::TypeError {
+                            msg: "Superclass must be a class.".to_string(),
                             line: name.line,
-                        })
+                        });
                     }
                 }
             }
@@ -275,22 +294,24 @@ impl<'source> Interpreter<'source> {
                 }
             }
             let klass = LoxClass::new(name.lexeme.to_string(), method_map, super_class_value);
-            self.environment.borrow_mut().assign(name, &Value::Class(klass.into()))?;
+            self.environment
+                .borrow_mut()
+                .assign(name, &Value::Class(klass.into()))?;
 
             if superclass.is_some() {
-                    let enclosing_env = {
-                        let env_ref = self.environment.borrow();
-                        env_ref.enclosing.clone()
-                    };
-                    if let Some(enclosing) = enclosing_env {
-                        self.environment = enclosing;
+                let enclosing_env = {
+                    let env_ref = self.environment.borrow();
+                    env_ref.enclosing.clone()
+                };
+                if let Some(enclosing) = enclosing_env {
+                    self.environment = enclosing;
                 }
             }
             Ok(Value::Nil)
         } else {
             Err(RuntimeError::TypeError {
                 msg: "Expected class statement".to_string(),
-                line: 0
+                line: 0,
             })
         }
     }
@@ -364,8 +385,8 @@ impl<'source> Interpreter<'source> {
             self.execute(else_stmt)?;
         }
 
-            Ok(Value::Nil)
-        }
+        Ok(Value::Nil)
+    }
 
     fn evaluate_assignment(
         &mut self,
@@ -435,10 +456,10 @@ impl<'source> Interpreter<'source> {
                 instance.borrow_mut().set(name, val.clone());
                 Ok(val)
             }
-            _ => Err(RuntimeError::TypeError { 
-                msg: "Invalid set target.".to_string(), 
-                line: name.line 
-            })
+            _ => Err(RuntimeError::TypeError {
+                msg: "Invalid set target.".to_string(),
+                line: name.line,
+            }),
         }
     }
 
@@ -451,34 +472,38 @@ impl<'source> Interpreter<'source> {
         let distance = if let Some(distance) = self.locals.get(&ByAddress(expr.clone())) {
             *distance
         } else {
-            return Err(RuntimeError::TypeError { 
-                msg: "Undefined variable 'super'.".into(), 
-                line: keyword.line
+            return Err(RuntimeError::TypeError {
+                msg: "Undefined variable 'super'.".into(),
+                line: keyword.line,
             });
         };
 
-        let superclass = match Environment::get_at_string(self.environment.clone(), distance, "super")? {
-            Value::Class(class_rc) => class_rc.clone(),
-            _ => return Err(RuntimeError::TypeError { 
-                msg: "super must be a class.".into(), 
-                line: keyword.line
-            }),
-        };
+        let superclass =
+            match Environment::get_at_string(self.environment.clone(), distance, "super")? {
+                Value::Class(class_rc) => class_rc.clone(),
+                _ => {
+                    return Err(RuntimeError::TypeError {
+                        msg: "super must be a class.".into(),
+                        line: keyword.line,
+                    });
+                }
+            };
 
-        let object = match Environment::get_at_string(self.environment.clone(), distance - 1, "this")? {
-            Value::Instance(instance_rc) => instance_rc.clone(),
-            _ => return Err(RuntimeError::TypeError { 
-                msg: "'this' must be instance.".into(),
-                line: keyword.line 
-            })
-        };
+        let object =
+            match Environment::get_at_string(self.environment.clone(), distance - 1, "this")? {
+                Value::Instance(instance_rc) => instance_rc.clone(),
+                _ => {
+                    return Err(RuntimeError::TypeError {
+                        msg: "'this' must be instance.".into(),
+                        line: keyword.line,
+                    });
+                }
+            };
 
-        // Now you need to find the method and return it
-        // This part depends on your class/method implementation
         if let Some(method_fn) = superclass.find_method(method.lexeme) {
             Ok(Value::Callable(Rc::new(method_fn.bind(object))))
         } else {
-            Err(RuntimeError::UndefinedVariable { 
+            Err(RuntimeError::UndefinedVariable {
                 found: method.lexeme.to_string(),
             })
         }
@@ -646,32 +671,35 @@ impl<'source> Interpreter<'source> {
                     return Err(RuntimeError::FunctionError {
                         lexeme: paren.to_string(),
                         line: paren.line,
-                        message: "Ensure your function call matches the function arity.".to_string(),
+                        message: "Ensure your function call matches the function arity."
+                            .to_string(),
                     });
                 }
                 class.call(self, arguments)
             }
-            _ => {
-                Err(RuntimeError::FunctionError {
-                    lexeme: paren.to_string(),
-                    line: paren.line,
-                    message: "Can only call functions and classes.".to_string(),
-                })
-            }
+            _ => Err(RuntimeError::FunctionError {
+                lexeme: paren.to_string(),
+                line: paren.line,
+                message: "Can only call functions and classes.".to_string(),
+            }),
         }
     }
 
-    fn evaluate_get(&mut self, object_expr: Rc<Expr<'source>>, name: Token<'source>) -> Result<Value<'source>, RuntimeError<'source>> {  
+    fn evaluate_get(
+        &mut self,
+        object_expr: Rc<Expr<'source>>,
+        name: Token<'source>,
+    ) -> Result<Value<'source>, RuntimeError<'source>> {
         let object = self.evaluate(object_expr)?;
         match object {
             Value::Instance(instance) => {
                 // Don't drop the borrow too early
                 instance.borrow().get(instance.clone(), name)
-            }               
-            _ => Err(RuntimeError::TypeError { 
-                msg: "Only instances have properties.".to_string(), 
-                line: name.line 
-            })
+            }
+            _ => Err(RuntimeError::TypeError {
+                msg: "Only instances have properties.".to_string(),
+                line: name.line,
+            }),
         }
     }
 
@@ -709,10 +737,9 @@ impl fmt::Display for Value<'_> {
             Value::Callable(c) => write!(f, "{:?}", c),
             Value::Class(class) => write!(f, "{}", class),
             Value::Instance(instance) => {
-                    let borrowed = instance.borrow();
-                    write!(f, "{} instance", borrowed)
+                let borrowed = instance.borrow();
+                write!(f, "{} instance", borrowed)
             }
-
         }
     }
 }

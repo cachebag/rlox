@@ -3,15 +3,11 @@
 
 use crate::{
     ast::{
-        expr, 
-        stmt::{FunctionDecl, Stmt}
-    }, 
-    error::ParserError, 
-    token::{
-        Literal, 
-        Token, 
-        TokenType
-    }
+        expr,
+        stmt::{FunctionDecl, Stmt},
+    },
+    error::ParserError,
+    token::{Literal, Token, TokenType},
 };
 use std::rc::Rc;
 
@@ -21,8 +17,7 @@ pub struct Parser<'source> {
     loop_depth: usize,
 }
 
-impl <'source> Parser<'source> {
-    
+impl<'source> Parser<'source> {
     pub fn new(tokens: Vec<Token<'source>>) -> Self {
         Self {
             tokens,
@@ -83,7 +78,7 @@ impl <'source> Parser<'source> {
                 kind: TokenType::Identifier,
                 lexeme: "method",
                 literal: None,
-                line: self.current_line()
+                line: self.current_line(),
             };
             let method = self.function(method_token)?;
             if let Stmt::Function(func_decl) = method {
@@ -92,10 +87,10 @@ impl <'source> Parser<'source> {
         }
 
         self.consume(TokenType::RightBrace, "Expect '}' after class body.")?;
-        Ok(Stmt::Class { 
+        Ok(Stmt::Class {
             name: class_name,
             superclass,
-            methods, 
+            methods,
         })
     }
 
@@ -128,9 +123,9 @@ impl <'source> Parser<'source> {
         } else if self.matches(&[TokenType::Var]) {
             Some(self.var_declaration()?)
         } else {
-            Some(self.expression_statement()?)  
+            Some(self.expression_statement()?)
         };
-        
+
         // 2. Parse the condition and advance to the next token
         let cond = if !self.check(&[TokenType::Semicolon]) {
             Some(self.expr()?)
@@ -151,23 +146,17 @@ impl <'source> Parser<'source> {
         let mut body = self.statement()?;
 
         if let Some(inc) = increment {
-            body = Stmt::Block(vec![
-                body, 
-                Stmt::Expression(Rc::new(inc))
-            ]);
+            body = Stmt::Block(vec![body, Stmt::Expression(Rc::new(inc))]);
         }
 
         let cond = cond.unwrap_or(expr::Expr::Literal(Literal::True));
         body = Stmt::While {
-            condition: Rc::new(cond), 
-            body: Box::new(body) 
+            condition: Rc::new(cond),
+            body: Box::new(body),
         };
 
         if let Some(init) = initializer {
-            body = Stmt::Block(vec![
-                init,
-                body
-            ]);
+            body = Stmt::Block(vec![init, body]);
         }
 
         Ok(body)
@@ -175,7 +164,7 @@ impl <'source> Parser<'source> {
 
     fn if_statement(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
         self.consume(TokenType::LeftParen, "Expect '(' after 'if'.")?;
-        let cond= self.expr()?;
+        let cond = self.expr()?;
         self.consume(TokenType::RightParen, "Expect ')' after condition.")?;
 
         let then_br = self.statement()?;
@@ -186,8 +175,8 @@ impl <'source> Parser<'source> {
 
         Ok(Stmt::If {
             condition: Rc::new(cond),
-            then_branch: Box::new(then_br), 
-            else_branch: else_br, 
+            then_branch: Box::new(then_br),
+            else_branch: else_br,
         })
     }
 
@@ -206,9 +195,9 @@ impl <'source> Parser<'source> {
         }
 
         self.consume(TokenType::Semicolon, "Expect ';' after value.")?;
-        Ok(Stmt::Var { 
-            name: value, 
-            initializer: init 
+        Ok(Stmt::Var {
+            name: value,
+            initializer: init,
         })
     }
 
@@ -222,11 +211,11 @@ impl <'source> Parser<'source> {
 
         self.consume(TokenType::Semicolon, "Expect ';' after return statement.")?;
 
-        Ok(Stmt::Return { 
-            keyword: kw, 
-            value: val
+        Ok(Stmt::Return {
+            keyword: kw,
+            value: val,
         })
-    } 
+    }
 
     fn while_statement(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
         self.loop_depth += 1;
@@ -235,16 +224,17 @@ impl <'source> Parser<'source> {
         self.consume(TokenType::RightParen, "Expected ')' after condition.")?;
         let cond_body = self.statement()?;
         self.loop_depth -= 1;
-        Ok(Stmt::While { 
-            condition: Rc::new(cond), 
+        Ok(Stmt::While {
+            condition: Rc::new(cond),
             body: Box::new(cond_body),
         })
-
     }
 
     fn break_statement(&mut self) -> Result<Stmt<'source>, ParserError<'source>> {
         if self.loop_depth == 0 {
-            return Err(ParserError::BreakException { line: self.current_line() })
+            return Err(ParserError::BreakException {
+                line: self.current_line(),
+            });
         }
         let kword = self.previous().clone();
         self.consume(TokenType::Semicolon, "Expected ';' after keyword.")?;
@@ -259,7 +249,10 @@ impl <'source> Parser<'source> {
 
     fn function(&mut self, kind: Token<'source>) -> Result<Stmt<'source>, ParserError<'source>> {
         let name = self.consume(TokenType::Identifier, &format!("Expect {} name.", kind))?;
-        self.consume(TokenType::LeftParen, &format!("Expect '(' after {} name.", kind))?;
+        self.consume(
+            TokenType::LeftParen,
+            &format!("Expect '(' after {} name.", kind),
+        )?;
 
         let mut parameters = Vec::new();
         if !self.check(&[TokenType::RightParen]) {
@@ -274,15 +267,18 @@ impl <'source> Parser<'source> {
                 } else {
                     break;
                 }
-            } 
+            }
         }
 
         self.consume(TokenType::RightParen, "Expect ')' after parameters.")?;
-        self.consume(TokenType::LeftBrace, &format!("Expect '{{' before {} name.", kind))?;
+        self.consume(
+            TokenType::LeftBrace,
+            &format!("Expect '{{' before {} name.", kind),
+        )?;
         let body = self.block()?;
 
         let decl = FunctionDecl {
-            name: Some(name), 
+            name: Some(name),
             params: parameters,
             body,
         };
@@ -303,51 +299,51 @@ impl <'source> Parser<'source> {
 
     fn comma(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
         let mut expr = self.assignment()?;
-        
+
         while let Some(token) = self.peek() {
             match token.kind {
-                    TokenType::Comma => {
-                        self.advance();
-                        let operator = self.previous().clone();
-                        let right = self.assignment()?;
-                        expr = expr::Expr::binary(expr, operator, right);
-                    }
-                    _ => break,
+                TokenType::Comma => {
+                    self.advance();
+                    let operator = self.previous().clone();
+                    let right = self.assignment()?;
+                    expr = expr::Expr::binary(expr, operator, right);
                 }
+                _ => break,
             }
-            Ok(expr)
+        }
+        Ok(expr)
     }
 
     fn assignment(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
         let expr = self.or()?;
-        
+
         // Is the next token '='?
         if let Some(token) = self.peek() {
             if token.kind == TokenType::Equal {
                 self.advance(); // consume it 
                 // Recursively call assignment to get the value - We are now on the right-hand side
-                // of the assignment 
+                // of the assignment
                 let value = self.assignment()?;
 
                 match expr {
                     expr::Expr::Variable { name } => {
-                        return Ok(expr::Expr::Assign { 
-                            name, 
-                            value: Rc::new(value)
+                        return Ok(expr::Expr::Assign {
+                            name,
+                            value: Rc::new(value),
                         });
                     }
                     expr::Expr::Get { object, name } => {
-                        return Ok(expr::Expr::Set { 
-                            object, 
-                            name, 
-                            value: Rc::new(value), 
+                        return Ok(expr::Expr::Set {
+                            object,
+                            name,
+                            value: Rc::new(value),
                         });
                     }
                     _ => {
                         let token = self.previous();
-                        return Err(ParserError::InvalidAssignmentTarget { 
-                            found: token.clone(), 
-                            line: token.line, 
+                        return Err(ParserError::InvalidAssignmentTarget {
+                            found: token.clone(),
+                            line: token.line,
                         });
                     }
                 }
@@ -380,7 +376,7 @@ impl <'source> Parser<'source> {
                 self.advance();
                 let op = self.previous().clone();
                 let rhs = self.ternary()?;
-                expr = expr::Expr::logical(expr, op, rhs) 
+                expr = expr::Expr::logical(expr, op, rhs)
             } else {
                 break;
             }
@@ -399,12 +395,19 @@ impl <'source> Parser<'source> {
                     if colon_token.kind == TokenType::Colon {
                         self.advance();
                         let false_expr = self.ternary()?;
-                        return Ok(expr::Expr::ternary(expr, true_expr, false_expr))
+                        return Ok(expr::Expr::ternary(expr, true_expr, false_expr));
                     } else {
-                        return Err(ParserError::UnexpectedToken { expected: TokenType::Colon, found: colon_token.clone(), line: token.line });
+                        return Err(ParserError::UnexpectedToken {
+                            expected: TokenType::Colon,
+                            found: colon_token.clone(),
+                            line: token.line,
+                        });
                     }
                 } else {
-                    return Err(ParserError::UnexpectedEof { expected: "':'".to_string(), line: self.current_line() });
+                    return Err(ParserError::UnexpectedEof {
+                        expected: "':'".to_string(),
+                        line: self.current_line(),
+                    });
                 }
             }
         }
@@ -421,8 +424,8 @@ impl <'source> Parser<'source> {
                     let operator = self.previous().clone();
                     let right = self.comparison()?;
                     expr = expr::Expr::binary(expr, operator, right);
-            }
-            _ => break,
+                }
+                _ => break,
             }
         }
         Ok(expr)
@@ -433,8 +436,10 @@ impl <'source> Parser<'source> {
 
         while let Some(token) = self.peek() {
             match token.kind {
-                TokenType::Greater | TokenType::GreaterEqual
-                | TokenType::Less  | TokenType::LessEqual => {
+                TokenType::Greater
+                | TokenType::GreaterEqual
+                | TokenType::Less
+                | TokenType::LessEqual => {
                     self.advance();
                     let operator = self.previous().clone();
                     let right = self.term()?;
@@ -465,7 +470,7 @@ impl <'source> Parser<'source> {
 
     fn factor(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
         let mut expr = self.unary()?;
-        
+
         while let Some(token) = self.peek() {
             match token.kind {
                 TokenType::Slash | TokenType::Star => {
@@ -495,7 +500,10 @@ impl <'source> Parser<'source> {
         self.call()
     }
 
-    fn finish_call(&mut self, callee: expr::Expr<'source>) -> Result<expr::Expr<'source>, ParserError<'source>> {
+    fn finish_call(
+        &mut self,
+        callee: expr::Expr<'source>,
+    ) -> Result<expr::Expr<'source>, ParserError<'source>> {
         let mut arguments: Vec<Rc<expr::Expr<'source>>> = Vec::new();
 
         if !self.check(&[TokenType::RightParen]) {
@@ -513,12 +521,12 @@ impl <'source> Parser<'source> {
 
         let parentheses = self.consume(TokenType::RightParen, "Expect ')' after arguments.")?;
         Ok(expr::Expr::Call {
-            callee: Rc::new(callee), 
-            paren: parentheses, 
-            args: arguments, 
+            callee: Rc::new(callee),
+            paren: parentheses,
+            args: arguments,
         })
-    } 
-    
+    }
+
     fn call(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
         let mut expr = self.primary()?;
 
@@ -530,10 +538,11 @@ impl <'source> Parser<'source> {
                 }
                 Some(TokenType::Dot) => {
                     self.advance();
-                    let name = self.consume(TokenType::Identifier, "Expect property name after '.'.")?;
-                    expr = expr::Expr::Get { 
-                        object: Rc::new(expr), 
-                        name, 
+                    let name =
+                        self.consume(TokenType::Identifier, "Expect property name after '.'.")?;
+                    expr = expr::Expr::Get {
+                        object: Rc::new(expr),
+                        name,
                     }
                 }
                 Some(TokenType::Increment | TokenType::Decrement) => {
@@ -548,19 +557,19 @@ impl <'source> Parser<'source> {
     }
 
     fn primary(&mut self) -> Result<expr::Expr<'source>, ParserError<'source>> {
-        let token = self.peek().ok_or_else(|| ParserError::UnexpectedEof {
-            expected: "expression".to_string(), 
-            line: self.current_line() 
-        })?.clone();
+        let token = self
+            .peek()
+            .ok_or_else(|| ParserError::UnexpectedEof {
+                expected: "expression".to_string(),
+                line: self.current_line(),
+            })?
+            .clone();
 
         match token.kind {
             TokenType::Super => {
                 let keyword = self.advance().clone();
                 let method = self.consume(TokenType::Dot, "Expect '.' after 'super'.")?;
-                Ok(expr::Expr::Super { 
-                    keyword, 
-                    method, 
-                })
+                Ok(expr::Expr::Super { keyword, method })
             }
             TokenType::This => {
                 let keyword = self.advance().clone();
@@ -568,9 +577,7 @@ impl <'source> Parser<'source> {
             }
             TokenType::Identifier => {
                 let identifier = self.advance().clone();
-                Ok(expr::Expr::Variable {
-                    name: identifier
-                })
+                Ok(expr::Expr::Variable { name: identifier })
             }
             TokenType::False => {
                 self.advance();
@@ -586,7 +593,8 @@ impl <'source> Parser<'source> {
             }
             TokenType::Number | TokenType::String => {
                 let token = self.advance();
-                let literal = token.literal
+                let literal = token
+                    .literal
                     .clone()
                     .expect("Literal token missing literal value");
                 Ok(expr::Expr::literal(literal))
@@ -605,17 +613,18 @@ impl <'source> Parser<'source> {
             TokenType::Fn => {
                 self.advance();
                 self.consume(TokenType::LeftParen, "Expect '(' after 'fn'")?;
-                
+
                 let mut parameters = Vec::new();
                 if !self.check(&[TokenType::RightParen]) {
                     loop {
                         if parameters.len() >= 255 {
                             return Err(ParserError::TooManyParams {
-                                line: self.current_line() 
+                                line: self.current_line(),
                             });
                         }
 
-                        let param = self.consume(TokenType::Identifier, "Expect paramater name.")?;
+                        let param =
+                            self.consume(TokenType::Identifier, "Expect paramater name.")?;
                         parameters.push(param.clone());
 
                         if !self.matches(&[TokenType::Comma]) {
@@ -626,12 +635,15 @@ impl <'source> Parser<'source> {
                 self.consume(TokenType::RightParen, "Expect ')' after parameters.")?;
                 self.consume(TokenType::LeftBrace, "Expect '{' before lambda body")?;
                 let body_block = self.block()?;
-                Ok(expr::Expr::Lambda { 
-                    params: parameters, 
-                    body: body_block  
+                Ok(expr::Expr::Lambda {
+                    params: parameters,
+                    body: body_block,
                 })
             }
-            _ => Err(ParserError::UnexpectedExpression { found: token.clone(), line: token.line }),
+            _ => Err(ParserError::UnexpectedExpression {
+                found: token.clone(),
+                line: token.line,
+            }),
         }
     }
 
@@ -653,7 +665,7 @@ impl <'source> Parser<'source> {
                     | TokenType::While
                     | TokenType::Print
                     | TokenType::Return => return,
-                    _ => { 
+                    _ => {
                         self.advance();
                     }
                 },
@@ -662,13 +674,17 @@ impl <'source> Parser<'source> {
         }
     }
 
-    fn consume(&mut self, expected: TokenType, message: &str) -> Result<Token<'source>, ParserError<'source>> {
+    fn consume(
+        &mut self,
+        expected: TokenType,
+        message: &str,
+    ) -> Result<Token<'source>, ParserError<'source>> {
         match self.peek() {
             Some(token) if token.kind == expected => Ok(self.advance()),
             Some(token) => Err(ParserError::UnexpectedToken {
-                expected, 
-                found: token.clone(), 
-                line: token.line 
+                expected,
+                found: token.clone(),
+                line: token.line,
             }),
             None => Err(ParserError::UnexpectedEof {
                 expected: message.to_string(),
@@ -681,7 +697,7 @@ impl <'source> Parser<'source> {
         if !self.is_at_end() {
             self.current += 1;
         }
-       self.previous().clone()
+        self.previous().clone()
     }
 
     fn is_at_end(&self) -> bool {
@@ -693,13 +709,13 @@ impl <'source> Parser<'source> {
     }
 
     fn check(&self, matches: &[TokenType]) -> bool {
-       if let Some(token) = self.peek() {
+        if let Some(token) = self.peek() {
             if matches.contains(&token.kind) {
                 return true;
             }
-        } 
-        false 
-    } 
+        }
+        false
+    }
 
     fn previous(&self) -> &Token<'source> {
         &self.tokens[self.current - 1]
@@ -718,5 +734,4 @@ impl <'source> Parser<'source> {
         }
         false
     }
-
 }
