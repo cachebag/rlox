@@ -1,9 +1,6 @@
 // lox_class.rs
 // Implements LoxClass, representing class objects and inheritance in rlox.
 
-// author: akrm al-hakimi
-// our class
-
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
