@@ -294,10 +294,8 @@ impl fmt::Display for ScannerError {
     }
 }
 
-// Implementing the std::error::Error trait for ScannerError
 impl std::error::Error for ScannerError {}
 
-// Conversion from io::Error to ScannerError
 impl From<io::Error> for ScannerError {
     fn from(e: io::Error) -> Self {
         Self::Io(e)
