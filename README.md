@@ -1,5 +1,5 @@
 # rlox 🦀
-#### Yet another implementation of `jlox` in Rust, via _Robert Nystrom’s_ Crafting Interpreters
+#### Yet another implementation of Lox in Rust, via _Robert Nystrom’s_ Crafting Interpreters
 #
 
 This isn't a line-for-line port but rather (an attempt at) a faithful, idiomatic re-implementation. More than anything, it's an exercise.  
