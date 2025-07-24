@@ -1,6 +1,5 @@
 // env.rs
 // Implements environment and scope management for variables in rlox.
-// Environment module for managing variable scopes in the interpreter
 
 use crate::token::Token;
 use crate::{error::RuntimeError, interpreter::Value};
