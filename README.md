@@ -2,7 +2,7 @@
 #### Yet another implementation of Lox in Rust, via _Robert Nystrom’s_ Crafting Interpreters
 #
 
-This isn't a line-for-line port but rather (an attempt at) a faithful, idiomatic re-implementation. More than anything, it's an exercise.  
+This is (an attempt at) a faithful, idiomatic re-implementation of Lox built in Rust. More than anything, it's an exercise.  
 
 # Usage
 1. Clone and build
