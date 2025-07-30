@@ -2,7 +2,7 @@
 #### Yet another implementation of Lox in Rust, via _Robert Nystrom’s_ Crafting Interpreters
 #
 
-This is (an attempt at) a faithful, idiomatic re-implementation of Lox (which wass built in Java) built in Rust. More than anything, it's an exercise.  
+This is (an attempt at) a faithful, idiomatic re-implementation of Lox (which was built in Java) in Rust. More than anything, it's an exercise.  
 
 # Usage
 1. Clone and build
